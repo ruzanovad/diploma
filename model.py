@@ -117,7 +117,7 @@ class MultiHeadAttention(nn.Module):
         """
         d_k = query.shape[-1]
 
-        attention_scores = query @ key.transpose(-2, -2) / np.sqrt(d_k)
+        attention_scores = query @ key.transpose(-2, -1) / np.sqrt(d_k)
 
         if mask is not None:
             attention_scores.masked_fill(mask == 0, -1e9)  # softmax(-1e9) = 0
@@ -152,7 +152,7 @@ class MultiHeadAttention(nn.Module):
 
         # Before transpose: (Batch size,Seq len,h,dk)
         # After transpose: (Batch size,h,Seq len,dk)
-        x = x.transpose(1, 2).contigious().view(x.shape[0], -1, self.h * self.d_k)
+        x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.h * self.d_k)
         # concat
 
         # .contiguous()
@@ -290,7 +290,7 @@ class Transformer(nn.Module):
     def decode(self, encoder_output, src_mask, tgt, tgt_mask):
         tgt = self.tgt_embed(tgt)
         tgt = self.tgt_pos(tgt)
-        return self.encoder(tgt, encoder_output, src_mask, tgt_mask)
+        return self.decoder(tgt, encoder_output, src_mask, tgt_mask)
 
     def project(self, x):
         return self.projection_layer(x)
