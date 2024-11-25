@@ -42,7 +42,7 @@ class TranslationDataset(Dataset):
         )
 
     def __len__(self):
-        return len(self.ds)
+        return len(self.dataset)
 
     def __getitem__(self, idx):
         """
@@ -50,7 +50,7 @@ class TranslationDataset(Dataset):
         and processes it as follows:
         """
         # Retrieve Texts
-        src_target_pair = self.ds[idx]
+        src_target_pair = self.dataset[idx]
         src_text = src_target_pair["translation"][self.src_lang]
         tgt_text = src_target_pair["translation"][self.tgt_lang]
 
