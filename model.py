@@ -193,7 +193,7 @@ class EncoderBlock(nn.Module):
         x = self.residual_connections[0](
             x, lambda y: self.self_attention_block(y, y, y, src_mask)
         )
-        x = self.residual_connections[1](x, self.feed_forward_block(x))
+        x = self.residual_connections[1](x, self.feed_forward_block)
         return x
 
 
@@ -321,7 +321,7 @@ def build_transformer(
         encoder_self_attention_block = MultiHeadAttention(d_model, h, dropout)
         feed_forward_block = FeedForward(d_model, d_ff, dropout)
         encoder_block = EncoderBlock(
-            d_model, encoder_self_attention_block, feed_forward_block, dropout
+            encoder_self_attention_block, feed_forward_block, dropout
         )
         encoder_blocks.append(encoder_block)
 
@@ -332,7 +332,6 @@ def build_transformer(
         decoder_cross_attention_block = MultiHeadAttention(d_model, h, dropout)
         feed_forward_block = FeedForward(d_model, d_ff, dropout)
         decoder_block = DecoderBlock(
-            d_model,
             decoder_self_attention_block,
             decoder_cross_attention_block,
             feed_forward_block,
