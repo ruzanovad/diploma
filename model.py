@@ -54,7 +54,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        x += (self.pe[:, : x.shape[1], :]).requres_grad_(False)  # not learned
+        x += (self.pe[:, : x.shape[1], :]).requires_grad_(False)  # not learned
         return self.dropout(x)
 
 
@@ -340,8 +340,8 @@ def build_transformer(
         decoder_blocks.append(decoder_block)
 
     # Create the encoder and decoder
-    encoder = Encoder(d_model, nn.ModuleList(encoder_blocks))
-    decoder = Decoder(d_model, nn.ModuleList(decoder_blocks))
+    encoder = Encoder(nn.ModuleList(encoder_blocks))
+    decoder = Decoder(nn.ModuleList(decoder_blocks))
 
     # Create the projection layer
     projection_layer = ProjectionLayer(d_model, tgt_vocab_size)
