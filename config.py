@@ -12,7 +12,7 @@ def get_config():
         "batch_size": 8,
         "num_epochs": 20,
         "lr": 10**-4,
-        "seq": 350,
+        "seq": 256,
         "d_model": 512,
         "datasource": "Helsinki-NLP/opus-100",
         "lang_src": "en",
