@@ -14,7 +14,7 @@ def get_config():
         "lr": 10**-4,
         "seq": 128,
         "d_model": 512,
-        "datasource": "Helsinki-NLP/opus-books",
+        "datasource": "Helsinki-NLP/opus_books",
         "lang_src": "en",
         "lang_tgt": "ru",
         "model_folder": "weights",
