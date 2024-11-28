@@ -130,7 +130,9 @@ def get_or_build_tokenizer(config, ds, lang):
     if not Path.exists(tokenizer_path):
         # Most code taken from: https://huggingface.co/docs/tokenizers/quicktour
         tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
+        # This pre-tokenizer simply splits using the following regex: \w+|[^\w\s]+
         tokenizer.pre_tokenizer = Whitespace()
+        # min_frequency (int, optional) — The minimum frequency a pair should have in order to be merged.
         trainer = WordLevelTrainer(
             special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]"], min_frequency=2
         )
