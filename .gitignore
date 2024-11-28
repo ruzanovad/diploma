@@ -1,0 +1,6 @@
+runs/
+Helsinki-NLP/
+.vscode
+__pycache__
+tokenizer_en.json
+tokenizer_ru.json
