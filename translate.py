@@ -1,5 +1,5 @@
 from pathlib import Path
-from config import get_config, latest_weights_file_path 
+from config import latest_weights_file_path 
 from model import build_transformer
 from tokenizers import Tokenizer
 from datasets import load_dataset
@@ -7,11 +7,11 @@ from dataset import TranslationDataset
 import torch
 import sys
 
-def translate(sentence: str):
+def translate(sentence: str, config):
     # Define the device, tokenizers, and model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
-    config = get_config()
+    # config = get_config()
     tokenizer_src = Tokenizer.from_file(str(Path(config['tokenizer_file'].format(config['lang_src']))))
     tokenizer_tgt = Tokenizer.from_file(str(Path(config['tokenizer_file'].format(config['lang_tgt']))))
     model = build_transformer(tokenizer_src.get_vocab_size(), tokenizer_tgt.get_vocab_size(), config["seq_len"], config['seq_len'], d_model=config['d_model']).to(device)
