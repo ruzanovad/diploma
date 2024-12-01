@@ -54,7 +54,10 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        x += (self.pe[:, : x.shape[1], :]).requires_grad_(False)  # not learned
+        # print("Input shape (x):", x.shape)
+        # print("Positional encoding shape (pe):", self.pe[:, : x.shape[1], :].shape)
+
+        x = x + (self.pe[:, : x.shape[1], :]).requires_grad_(False)  # not learned
         return self.dropout(x)
 
 
@@ -303,7 +306,7 @@ def build_transformer(
     tgt_seq_len: int,
     d_model=512,
     N: int = 6,
-    h: int = 8,
+    h: int = 4,
     dropout: float = 0.1,
     d_ff: int = 2048,
 ) -> Transformer:
