@@ -12,13 +12,18 @@ def get_config():
         "batch_size": 8,
         "num_epochs": 20,
         "lr": 10**-4,
-        "seq": 128,
-        "d_model": 256,
+        "seq": 128, # maximal length of sequence of tokens
+        "d_model": 256, # Dimension of embeddings for token
+        "h": 4, # Number of Heads in MultiHeadAttention
+        "N": 1, # number of Encoder/Decoder Blocks
+        "d_ff" : 2048, # in FeedForward layer
+        "dropout": 0.1,
+        "label_smoothing": 0.1, # for CrossEnthropyLoss 
         "datasource": "Helsinki-NLP/opus_books",
         "lang_src": "en",
         "lang_tgt": "ru",
         "model_folder": "weights",
-        "model_basename": "tmodel_",
+        "model_basename": "small_tmodel_",
         "preload": "latest",
         "tokenizer_file": "tokenizer_{0}.json",
         "experiment_name": "runs/tmodel",

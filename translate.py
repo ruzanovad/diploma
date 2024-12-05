@@ -1,6 +1,6 @@
 from pathlib import Path
 from config import latest_weights_file_path
-from model import build_transformer
+from train import get_model
 from tokenizers import Tokenizer
 from datasets import load_dataset
 from dataset import TranslationDataset
@@ -20,12 +20,9 @@ def translate(sentence: str, config):
     tokenizer_tgt = Tokenizer.from_file(
         str(Path(config["tokenizer_file"].format(config["lang_tgt"])))
     )
-    model = build_transformer(
-        tokenizer_src.get_vocab_size(),
-        tokenizer_tgt.get_vocab_size(),
-        config["seq"],
-        config["seq"],
-        d_model=config["d_model"],
+
+    model = get_model(
+        config, tokenizer_src.get_vocab_size(), tokenizer_tgt.get_vocab_size()
     ).to(device)
 
     # Load the pretrained weights

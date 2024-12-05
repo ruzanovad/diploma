@@ -14,6 +14,9 @@ class InputEmbeddings(nn.Module):
         self.d_model = d_model
         self.vocab_size = vocab_size
         # Using pytorch
+        # Difference between Embedding and Linear: Linear expects vectors
+        # (e.g. one-hot representation of the words), Embedding expects tokens
+        # (e.g. words index)
         self.embedding = nn.Embedding(vocab_size, d_model)
 
     # 3.4 from the paper - we need to multiply
@@ -62,6 +65,19 @@ class PositionalEncoding(nn.Module):
 
 
 class LayerNormalization(nn.Module):
+    """
+    Unlike batch normalization, Layer Normalization directly estimates
+    the normalization statistics from the summed inputs to the neurons
+    within a hidden layer so the normalization does not introduce any
+    new dependencies between training cases.
+
+    In layer normalization, all neurons in a particular layer
+    effectively have the same distribution across all features for a given input.
+
+    Normalizing across all features but for each of the inputs
+    to a specific layer removes the dependence on batches.
+    """
+
     def __init__(self, eps: float = 10**-6):
         super().__init__()
         self.eps = eps
@@ -69,14 +85,17 @@ class LayerNormalization(nn.Module):
         self.bias = nn.Parameter(torch.zeros(1))  # add
 
     def forward(self, x):
-        mean = x.mean(
-            dim=-1, keepdim=True
-        )  # (mean for d_model from (batch_size, seq_len, d_model))
+        # (mean for d_model from (batch_size, seq_len, d_model))
+        mean = x.mean(dim=-1, keepdim=True)
         std = x.std(dim=-1, keepdim=True)
         return self.alpha * (x - mean) / (std + self.eps) + self.bias
 
 
 class FeedForward(nn.Module):
+    """
+    Двухслойный перцептрон
+    """
+
     def __init__(self, d_model: int, d_ff: int, dropout: float):
         super().__init__()
         self.linear = nn.Sequential(
@@ -123,6 +142,7 @@ class MultiHeadAttention(nn.Module):
         attention_scores = query @ key.transpose(-2, -1) / np.sqrt(d_k)
 
         if mask is not None:
+            # Fills elements of self tensor with value where mask is True
             attention_scores.masked_fill(mask == 0, -1e9)  # softmax(-1e9) = 0
 
         attention_scores = attention_scores.softmax(dim=-1)  # softmax по seq_len
@@ -132,6 +152,7 @@ class MultiHeadAttention(nn.Module):
         return (
             attention_scores @ value
         ), attention_scores  # one for model, one for interptetability
+        # TODO interpretability
 
     def forward(self, q, k, v, mask):
         # q has dimension (Batch, seq_len, d_model)

@@ -22,9 +22,11 @@ import torchmetrics
 from torch.utils.tensorboard import SummaryWriter
 
 
-def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
-    sos_idx = tokenizer_tgt.token_to_id('[SOS]')
-    eos_idx = tokenizer_tgt.token_to_id('[EOS]')
+def greedy_decode(
+    model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device
+):
+    sos_idx = tokenizer_tgt.token_to_id("[SOS]")
+    eos_idx = tokenizer_tgt.token_to_id("[EOS]")
 
     # Precompute the encoder output and reuse it for every step
     encoder_output = model.encode(source, source_mask)
@@ -35,7 +37,9 @@ def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_
             break
 
         # build mask for target
-        decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
+        decoder_mask = (
+            causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
+        )
 
         # calculate output
         out = model.decode(encoder_output, source_mask, decoder_input, decoder_mask)
@@ -44,7 +48,11 @@ def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_
         prob = model.project(out[:, -1])
         _, next_word = torch.max(prob, dim=1)
         decoder_input = torch.cat(
-            [decoder_input, torch.empty(1, 1).type_as(source).fill_(next_word.item()).to(device)], dim=1
+            [
+                decoder_input,
+                torch.empty(1, 1).type_as(source).fill_(next_word.item()).to(device),
+            ],
+            dim=1,
         )
 
         if next_word == eos_idx:
@@ -52,7 +60,19 @@ def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_
 
     return decoder_input.squeeze(0)
 
-def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, device, print_msg, global_step, writer, num_examples=2):
+
+def run_validation(
+    model,
+    validation_ds,
+    tokenizer_src,
+    tokenizer_tgt,
+    max_len,
+    device,
+    print_msg,
+    global_step,
+    writer,
+    num_examples=2,
+):
     model.eval()
     count = 0
 
@@ -62,7 +82,7 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
 
     try:
         # get the console window width
-        with os.popen('stty size', 'r') as console:
+        with os.popen("stty size", "r") as console:
             _, console_width = console.read().split()
             console_width = int(console_width)
     except:
@@ -72,14 +92,21 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
     with torch.no_grad():
         for batch in validation_ds:
             count += 1
-            encoder_input = batch["encoder_input"].to(device) # (b, seq)
-            encoder_mask = batch["encoder_mask"].to(device) # (b, 1, 1, seq)
+            encoder_input = batch["encoder_input"].to(device)  # (b, seq)
+            encoder_mask = batch["encoder_mask"].to(device)  # (b, 1, 1, seq)
 
             # check that the batch size is 1
-            assert encoder_input.size(
-                0) == 1, "Batch size must be 1 for validation"
+            assert encoder_input.size(0) == 1, "Batch size must be 1 for validation"
 
-            model_out = greedy_decode(model, encoder_input, encoder_mask, tokenizer_src, tokenizer_tgt, max_len, device)
+            model_out = greedy_decode(
+                model,
+                encoder_input,
+                encoder_mask,
+                tokenizer_src,
+                tokenizer_tgt,
+                max_len,
+                device,
+            )
 
             source_text = batch["src_text"][0]
             target_text = batch["tgt_text"][0]
@@ -88,35 +115,35 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
             source_texts.append(source_text)
             expected.append(target_text)
             predicted.append(model_out_text)
-            
+
             # Print the source, target and model output
-            print_msg('-'*console_width)
+            print_msg("-" * console_width)
             print_msg(f"{f'SOURCE: ':>12}{source_text}")
             print_msg(f"{f'TARGET: ':>12}{target_text}")
             print_msg(f"{f'PREDICTED: ':>12}{model_out_text}")
 
             if count == num_examples:
-                print_msg('-'*console_width)
+                print_msg("-" * console_width)
                 break
-    
+
     if writer:
         # Evaluate the character error rate
-        # Compute the char error rate 
+        # Compute the char error rate
         metric = torchmetrics.text.CharErrorRate()
         cer = metric(predicted, expected)
-        writer.add_scalar('validation cer', cer, global_step)
+        writer.add_scalar("validation cer", cer, global_step)
         writer.flush()
 
         # Compute the word error rate
         metric = torchmetrics.text.WordErrorRate()
         wer = metric(predicted, expected)
-        writer.add_scalar('validation wer', wer, global_step)
+        writer.add_scalar("validation wer", wer, global_step)
         writer.flush()
 
         # Compute the BLEU metric
         metric = torchmetrics.text.BLEUScore()
         bleu = metric(predicted, expected)
-        writer.add_scalar('validation BLEU', bleu, global_step)
+        writer.add_scalar("validation BLEU", bleu, global_step)
         writer.flush()
 
 
@@ -205,6 +232,10 @@ def get_model(config, vocab_src_len, vocab_tgt_len):
         config["seq"],
         config["seq"],
         d_model=config["d_model"],
+        N=config["N"],
+        h=config["h"],
+        d_ff=config["d_ff"],
+        dropout=config["dropout"],
     )
     return model
 
@@ -216,6 +247,9 @@ def train_model(config):
         if torch.cuda.is_available()
         else "mps" if torch.has_mps or torch.backends.mps.is_available() else "cpu"
     )
+
+    # About MPS : https://pytorch.org/docs/stable/notes/mps.html
+
     print("Using device:", device)
     if device == "cuda":
         print(f"Device name: {torch.cuda.get_device_name(device.index)}")
@@ -268,7 +302,8 @@ def train_model(config):
         print("No model to preload, starting from scratch")
 
     loss_fn = nn.CrossEntropyLoss(
-        ignore_index=tokenizer_src.token_to_id("[PAD]"), label_smoothing=0.1
+        ignore_index=tokenizer_src.token_to_id("[PAD]"),
+        label_smoothing=config["label_smoothing"],
     ).to(device)
 
     for epoch in range(initial_epoch, config["num_epochs"]):
@@ -338,7 +373,8 @@ def train_model(config):
             model_filename,
         )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     config = get_config()
     train_model(config)
