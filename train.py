@@ -264,6 +264,9 @@ def get_model(config, vocab_src_len, vocab_tgt_len):
         d_ff=config["d_ff"],
         dropout=config["dropout"],
     )
+    total_params = sum(p.numel() for p in model.parameters())
+
+    print(f"Общее количество параметров: {total_params:,}")
     return model
 
 
