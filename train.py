@@ -178,8 +178,8 @@ def get_ds(config):
             split="train",
         )
     else:
-        ds_raw = load_dataset("parquet", data_files={'train': f'{config["parquet"]}'})
-
+        ds_raw = load_dataset("parquet", data_files={'train': f'{config["parquet"]}'})["train"]
+        # print(ds_raw.column_names)
 
     # filtering
     shuffled_dataset = ds_raw.shuffle(seed=42)
@@ -194,7 +194,7 @@ def get_ds(config):
     # Keep 90% for training, 5% for validation, 5% for test
     train_ds_size = int(0.9 * len(ds_raw))
     val_ds_size = (len(ds_raw) - train_ds_size) // 2
-    test_ds_size = train_ds_size - val_ds_size
+    test_ds_size = len(ds_raw) - train_ds_size - val_ds_size
     train_ds_raw, val_ds_raw, test_ds_raw = random_split(
         ds_raw, [train_ds_size, val_ds_size, test_ds_size]
     )

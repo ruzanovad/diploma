@@ -27,7 +27,7 @@ def get_config():
         "preload": "latest",
         "tokenizer_file": "tokenizer_{0}.json",
         "experiment_name": "runs/tmodel",
-        "parquet": "query_result.parquet",  # path to the parquet
+        "parquet": "sql-console-for-helsinki-nlp-opus-100.parquet",  # path to the parquet
         "percent": .5 # percent of original dataset
     }
 
