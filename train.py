@@ -171,21 +171,33 @@ def get_or_build_tokenizer(config, ds, lang):
 
 
 def get_ds(config):
-    # It only has the train split, so we divide it overselves
-    ds_raw = load_dataset(
-        f"{config['datasource']}",
-        f"{config['lang_src']}-{config['lang_tgt']}",
-        split="train",
-    )
+    if config["parquet"] == None:
+        ds_raw = load_dataset(
+            f"{config['datasource']}",
+            f"{config['lang_src']}-{config['lang_tgt']}",
+            split="train",
+        )
+    else:
+        ds_raw = load_dataset("parquet", data_files={'train': f'{config["parquet"]}'})
+
+
+    # filtering
+    shuffled_dataset = ds_raw.shuffle(seed=42)
+
+    num_samples = int(config["percent"] * len(shuffled_dataset))
+    ds_raw = shuffled_dataset.select(range(num_samples))
 
     # Build tokenizers
     tokenizer_src = get_or_build_tokenizer(config, ds_raw, config["lang_src"])
     tokenizer_tgt = get_or_build_tokenizer(config, ds_raw, config["lang_tgt"])
 
-    # Keep 90% for training, 10% for validation
+    # Keep 90% for training, 5% for validation, 5% for test
     train_ds_size = int(0.9 * len(ds_raw))
-    val_ds_size = len(ds_raw) - train_ds_size
-    train_ds_raw, val_ds_raw = random_split(ds_raw, [train_ds_size, val_ds_size])
+    val_ds_size = (len(ds_raw) - train_ds_size) // 2
+    test_ds_size = train_ds_size - val_ds_size
+    train_ds_raw, val_ds_raw, test_ds_raw = random_split(
+        ds_raw, [train_ds_size, val_ds_size, test_ds_size]
+    )
 
     train_ds = TranslationDataset(
         train_ds_raw,
@@ -197,6 +209,14 @@ def get_ds(config):
     )
     val_ds = TranslationDataset(
         val_ds_raw,
+        tokenizer_src,
+        tokenizer_tgt,
+        config["lang_src"],
+        config["lang_tgt"],
+        config["seq"],
+    )
+    test_ds = TranslationDataset(
+        test_ds_raw,
         tokenizer_src,
         tokenizer_tgt,
         config["lang_src"],
@@ -221,8 +241,15 @@ def get_ds(config):
         train_ds, batch_size=config["batch_size"], shuffle=True
     )
     val_dataloader = DataLoader(val_ds, batch_size=1, shuffle=True)
+    test_dataloader = DataLoader(test_ds, batch_size=1, shuffle=True)
 
-    return train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt
+    return (
+        train_dataloader,
+        val_dataloader,
+        test_dataloader,
+        tokenizer_src,
+        tokenizer_tgt,
+    )
 
 
 def get_model(config, vocab_src_len, vocab_tgt_len):
@@ -273,10 +300,11 @@ def train_model(config):
         parents=True, exist_ok=True
     )
 
-    train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
+    train_dataloader, val_dataloader, _, tokenizer_src, tokenizer_tgt = get_ds(config)
     model = get_model(
         config, tokenizer_src.get_vocab_size(), tokenizer_tgt.get_vocab_size()
     ).to(device)
+
     # Tensorboard
     writer = SummaryWriter(config["experiment_name"])
 

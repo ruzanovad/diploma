@@ -12,14 +12,14 @@ def get_config():
         "batch_size": 8,
         "num_epochs": 20,
         "lr": 10**-4,
-        "seq": 128, # maximal length of sequence of tokens
-        "d_model": 256, # Dimension of embeddings for token
-        "h": 4, # Number of Heads in MultiHeadAttention
-        "N": 1, # number of Encoder/Decoder Blocks
-        "d_ff" : 2048, # in FeedForward layer
+        "seq": 128,  # maximal length of sequence of tokens
+        "d_model": 256,  # Dimension of embeddings for token
+        "h": 4,  # Number of Heads in MultiHeadAttention
+        "N": 1,  # number of Encoder/Decoder Blocks
+        "d_ff": 1024,  # in FeedForward layer
         "dropout": 0.1,
-        "label_smoothing": 0.1, # for CrossEnthropyLoss 
-        "datasource": "Helsinki-NLP/opus_books",
+        "label_smoothing": 0.1,  # for CrossEnthropyLoss
+        "datasource": "Helsinki-NLP/opus-100",
         "lang_src": "en",
         "lang_tgt": "ru",
         "model_folder": "weights",
@@ -27,6 +27,8 @@ def get_config():
         "preload": "latest",
         "tokenizer_file": "tokenizer_{0}.json",
         "experiment_name": "runs/tmodel",
+        "parquet": "query_result.parquet",  # path to the parquet
+        "percent": .5 # percent of original dataset
     }
 
 
