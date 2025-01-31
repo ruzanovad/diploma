@@ -4,3 +4,7 @@ Helsinki-NLP/
 __pycache__
 tokenizer_en.json
 tokenizer_ru.json
+*.tex
+*.dvi
+*.log
+*.aux
