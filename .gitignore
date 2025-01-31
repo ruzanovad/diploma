@@ -8,3 +8,4 @@ tokenizer_ru.json
 *.dvi
 *.log
 *.aux
+*.png
