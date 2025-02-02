@@ -16,3 +16,8 @@ Cell In[2], line 23
 error: OpenCV(4.10.0) /io/opencv/modules/highgui/src/window.cpp:1301: error: (-2:Unspecified error) The function is not implemented. Rebuild the library with Windows, GTK+ 2.x or Cocoa support. If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script in function 'cvShowImage'
 
 on fedora ```sudo dnf install gtk3-devel``
+
+# DVC
+
+```dvc init --subdir```
+```dvc add number_patterns dataset```

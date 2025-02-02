@@ -1,0 +1,6 @@
+outs:
+- md5: 4f1e1c3383bab1a6f713a32b161119df.dir
+  size: 4438
+  nfiles: 10
+  hash: md5
+  path: number_patterns
