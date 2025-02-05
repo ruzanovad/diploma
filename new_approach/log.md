@@ -21,3 +21,17 @@ on fedora ```sudo dnf install gtk3-devel``
 
 ```dvc init --subdir```
 ```dvc add number_patterns dataset```
+
+Template matching could not be suitable
+
+Fixed Size vs. Variable Size: Do all patterns have the same size?
+Fixed Position vs. Random Position: Are patterns always in the same place within the image?
+Simple vs. Complex Background: Do they appear on a uniform background, or is it complex?
+Limited vs. Multiple Patterns: Are there multiple pattern classes?
+
+Требуется мануальная разметка 
+
+pip install labelImg
+dvitype for getting text from dvi
+
+for patterns it is easy because patterns bounding box is a whole picture width and height
