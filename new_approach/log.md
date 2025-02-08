@@ -35,3 +35,7 @@ pip install labelImg
 dvitype for getting text from dvi
 
 for patterns it is easy because patterns bounding box is a whole picture width and height
+
+величина буквы зависит от шрифта
+
+для начала достаточно template matching для подготовки bounding box
