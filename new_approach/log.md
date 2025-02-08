@@ -39,3 +39,5 @@ for patterns it is easy because patterns bounding box is a whole picture width a
 величина буквы зависит от шрифта
 
 для начала достаточно template matching для подготовки bounding box
+
+Проблема - не фиксированное количество объектов которые могут быть найдены 
