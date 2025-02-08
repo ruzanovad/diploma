@@ -6,7 +6,7 @@ patterns_dir = "number_patterns"
 
 types = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9"}
 
-def get_bounding_boxes(filename, threshold=0.8):
+def get_bounding_boxes(filename, threshold=0.9):
     boxes = []
     for pattern in types.keys():
         # Загрузим изображение и шаблон
@@ -23,7 +23,7 @@ def get_bounding_boxes(filename, threshold=0.8):
         res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
 
         # Установим порог обнаружения
-        threshold = 0.8
+        # threshold = 0.8
         loc = np.where(res >= threshold)
 
         for pt in zip(*loc[::-1]):

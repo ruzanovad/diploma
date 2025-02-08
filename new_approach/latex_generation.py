@@ -1,12 +1,9 @@
 import subprocess
 import os
 import glob
-import json
 import random
-import re
 from PIL import Image
-
-import new_approach.bounding_box as bounding_box
+import bounding_box
 
 
 latex = r"""\documentclass{standalone}
@@ -101,14 +98,12 @@ def generate_pattern(level="number"):
             raise Exception("Unsupported pattern level")
 
 
-def generate_dataset(level="number", count=1000, seed=42):
+def generate_dataset(level="number", count=100, seed=42):
     random.seed(seed)
     match level:
         case "number":
             base_dir = "dataset"
             os.makedirs(base_dir, exist_ok=True)
-
-            json
 
             unique_numbers = random.sample(range(1, 10001), count)
             for code in range(count):
@@ -159,7 +154,7 @@ def generate_dataset(level="number", count=1000, seed=42):
 
                 txt_file = f"{current_file}.txt"  
                 bounding_boxes = bounding_box.get_bounding_boxes(png_file)
-                
+
                 with open(txt_file, "w") as file:
                     for box in bounding_boxes:
                         file.write(' '.join(box) +'\n')
