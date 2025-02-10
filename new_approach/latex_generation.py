@@ -13,6 +13,7 @@ latex = r"""\documentclass{standalone}
 \end{document}
 """
 
+DATASETS = "datasets"
 
 def delete_files_with_extension(directory, extension):
     for file_path in glob.glob(os.path.join(directory, f"*.{extension}")):
@@ -27,7 +28,7 @@ def delete_files_with_extension(directory, extension):
 def generate_pattern(level="number"):
     match level:
         case "number":
-            base_dir = "number_patterns"
+            base_dir = os.path.join(DATASETS , "number_patterns")
             os.makedirs(base_dir, exist_ok=True)
 
             for number in map(str, range(0, 10)):
@@ -158,7 +159,7 @@ def generate_dataset(level="number", count=100, seed=42, train=80, val=20):
     random.seed(seed)
     match level:
         case "number":
-            base_dir = "dataset"
+            base_dir = os.path.join(DATASETS , "dataset")
             images_dir = os.path.join(base_dir, "images")
             labels_dir = os.path.join(base_dir, "labels")
 
@@ -194,7 +195,7 @@ def generate_dataset(level="number", count=100, seed=42, train=80, val=20):
                 file.write("val: images/val\n\n")
                 file.write("names:\n")
                 for key in sorted(bounding_box.types.keys()):
-                    file.write(f"\t{key}: {bounding_box.types[key]}\n")
+                    file.write(f"  {key}: {bounding_box.types[key]}\n")
 
         case _:
             raise Exception("Unsupported pattern level")
