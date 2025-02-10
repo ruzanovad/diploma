@@ -202,5 +202,5 @@ def generate_dataset(level="number", count=100, seed=42, train=80, val=20):
 
 
 if __name__ == "__main__":
-# generate_pattern()
+    generate_pattern()
     generate_dataset()

@@ -1,8 +1,8 @@
 import cv2
 import os
 import numpy as np
-
-patterns_dir = "number_patterns"
+import latex_generation
+patterns_dir = os.path.join(latex_generation.DATASETS, "number_patterns")
 
 types = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9"}
 

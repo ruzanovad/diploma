@@ -1,6 +1,0 @@
-outs:
-- md5: a93e437c50583189e85468ead0bdb5b8.dir
-  size: 4608
-  nfiles: 20
-  hash: md5
-  path: number_patterns
