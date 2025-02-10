@@ -9,3 +9,4 @@ tokenizer_ru.json
 *.log
 *.aux
 *.png
+new_approach/yolo11n.pt
