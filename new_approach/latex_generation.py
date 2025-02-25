@@ -156,7 +156,7 @@ def fill_file(images_dir, labels_dir, code, greek):
         content = generate_decimal()
         suffix = "decimal"
     elif choice == 2:
-        content = generate_greek()
+        content = generate_greek(greek)
         suffix = "greek"
     else:
         content = generate_word()
@@ -287,5 +287,5 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
 
 if __name__ == "__main__":
     # generate_pattern()
-    generate_dataset()
+    generate_dataset(count=100)
     # print(load_symbols_from_templates(os.getenv("templates")))
