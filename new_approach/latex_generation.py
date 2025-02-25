@@ -145,15 +145,19 @@ def generate_one(current_prefix: str, template):
         delete_files_with_extension("", ext)
 
 
-def fill_file(images_dir, labels_dir, code):
-
-    choice = random.randint(0, 2)
+def fill_file(images_dir, labels_dir, code, greek):
+    if greek==None:
+        raise Exception("Must provide greek alphabet")
+    choice = random.randint(0, 3)
     if choice == 0:
         content = generate_number()
         suffix = "number"
     elif choice == 1:
         content = generate_decimal()
         suffix = "decimal"
+    elif choice == 2:
+        content = generate_greek()
+        suffix = "greek"
     else:
         content = generate_word()
         suffix = "word"
@@ -219,11 +223,19 @@ def generate_decimal() -> str:
     return f"{integer_part}.{decimal_part}"
 
 
-def generate_word(length=5) -> str:
-    length = random.randint(1, 5)
+def generate_word() -> str:
+    length = random.randint(10, 45)
     return "".join(
         random.choices("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", k=length)
     )
+
+def generate_greek(list_of_letters:list) -> str:
+    length = random.randint(10, 45)
+    return "".join(
+        random.choices(list_of_letters, k=length)
+    )
+
+
 
 
 def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
@@ -245,11 +257,21 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
 
     train_number = (count * train) // 100
     val_number = count - train_number
+
+    greek_letters = []
+    greek_path = os.path.join(os.getenv("templates"), "greek-letter.txt")
+    with open(greek_path, "r") as file:
+            for line in file:
+                symbol = line.strip()
+                greek_letters.append(symbol)
+                    
+
+
     for code in range(train_number):
-        fill_file(images_train_dir, labels_train_dir, code)
+        fill_file(images_train_dir, labels_train_dir, code, greek_letters)
 
     for code in range(train_number, train_number + val_number):
-        fill_file(images_val_dir, labels_val_dir, code)
+        fill_file(images_val_dir, labels_val_dir, code, greek_letters)
 
     # Clean up
     for ext in ["aux", "log", "dvi", "tex"]:
