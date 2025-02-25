@@ -58,3 +58,32 @@ for patterns it is easy because patterns bounding box is a whole picture width a
 рассматриваем LaTeX как формальный язык
 
 I deleted omicron and other greek letters because they doesn't exist in latex.
+
+Как сгенерировать хороший датасет?
+
+TODO генерировать файл о том, как часто встречается тот или иной класс в датасете
+вообще нужно бы генерировать так, чтобы было равномерное распределение на множестве классов
+
+map-50
+Mean Average Precision
+
+
+Intersection over Union (IoU): IoU is a measure that quantifies the overlap between a predicted bounding box and a ground truth bounding box. It plays a fundamental role in evaluating the accuracy of object localization.
+
+Average Precision (AP): AP computes the area under the precision-recall curve, providing a single value that encapsulates the model's precision and recall performance.
+
+Mean Average Precision (mAP): mAP extends the concept of AP by calculating the average AP values across multiple object classes. This is useful in multi-class object detection scenarios to provide a comprehensive evaluation of the model's performance.
+
+
+
+Box(P, R, mAP50, mAP50-95): This metric provides insights into the model's performance in detecting objects:
+
+    P (Precision): The accuracy of the detected objects, indicating how many detections were correct.
+
+    R (Recall): The ability of the model to identify all instances of objects in the images.
+
+    mAP50: Mean average precision calculated at an intersection over union (IoU) threshold of 0.50. It's a measure of the model's accuracy considering only the "easy" detections.
+
+    mAP50-95: The average of the mean average precision calculated at varying IoU thresholds, ranging from 0.50 to 0.95. It gives a comprehensive view of the model's performance across different levels of detection difficulty.
+
+https://docs.ultralytics.com/guides/yolo-performance-metrics/#class-wise-metrics
