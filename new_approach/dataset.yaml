@@ -99,7 +99,41 @@ names:
   97: X
   98: Y
   99: Z
-nc: 100
-path: datasets
+  100: \alpha
+  101: \beta
+  102: \gamma
+  103: \delta
+  104: \epsilon
+  105: \zeta
+  106: \eta
+  107: \theta
+  108: \iota
+  109: \kappa
+  110: \lambda
+  111: \mu
+  112: \nu
+  113: \xi
+  114: \pi
+  115: \rho
+  116: \sigma
+  117: \tau
+  118: \upsilon
+  119: \phi
+  120: \chi
+  121: \psi
+  122: \omega
+  123: \Gamma
+  124: \Delta
+  125: \Theta
+  126: \Lambda
+  127: \Xi
+  128: \Pi
+  129: \Sigma
+  130: \Upsilon
+  131: \Phi
+  132: \Psi
+  133: \Omega
+nc: 134
+path: dataset
 train: images/train
 val: images/val

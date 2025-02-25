@@ -257,7 +257,9 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
         delete_files_with_extension(images_val_dir, ext)
 
     utils.generate_yolo_yaml(
-        os.getenv("templates"), os.getenv("dataset_folder"), "dataset.yaml"
+        os.getenv("templates"),
+        os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder"))),
+        "dataset.yaml",
     )
 
 
