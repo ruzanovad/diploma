@@ -3,6 +3,7 @@ import yaml
 from dotenv import load_dotenv
 import cv2
 import numpy as np
+import torch
 
 
 def get_bounding_boxes(filename, threshold=0.9):
@@ -86,28 +87,49 @@ def generate_yolo_yaml(template_dir, dataset_dir, output_file):
         yaml.dump(yolo_config, file, default_flow_style=False)
 
 
-def stupid_encoder(bounding_boxes: list[list], class_to_latex: dict):
+def get_inverted_dict(dictionary):
+    return {v: k for k, v in dictionary.items()}
+
+
+def stupid_encoder(bounding_boxes: torch.Tensor, class_to_latex: dict = None):
     """
-    Encodes bounding boxes into LaTeX code.
+    Encodes bounding boxes into LaTeX code using naive approach.
 
     Parameters:
-    bounding_boxes (list): List of bounding boxes with format [class, x_center, y_center, width, height].
+    bounding_boxes (torch.Tensor): Tensor of bounding boxes with format [class, x_center, y_center, width, height].
     class_to_latex (dict): Dictionary mapping classes to LaTeX tags.
 
     Returns:
     str: Generated LaTeX code.
     """
-    symbols_dict = load_symbols_from_templates(os.getenv("templates"))
-    class_to_latex = {symbols_dict[key]: key for key in symbols_dict.keys()}
+    if class_to_latex == None:
+        class_to_latex = get_inverted_dict(
+            load_symbols_from_templates(os.getenv("templates"))
+        )
 
-    # Sort bounding boxes from left to right and top to bottom
-    bounding_boxes.sort(key=lambda box: (float(box[0]), float(box[1])))
+    bounding_boxes = bounding_boxes.to("cpu")
+    # Сортировка по x, потом по y
 
-    # Generate LaTeX code
-    latex_code = ""
-    for box in bounding_boxes:
-        class_id = box[0]
-        latex_tag = class_to_latex.get(class_id, "")
-        latex_code += latex_tag
+    def lexsort(keys, dim=-1):
+        if keys.ndim < 2:
+            raise ValueError(f"keys must be at least 2 dimensional, but {keys.ndim=}.")
+        if len(keys) == 0:
+            raise ValueError(f"Must have at least 1 key, but {len(keys)=}.")
+
+        idx = keys[0].argsort(dim=dim, stable=True)
+        for k in keys[1:]:
+            idx = idx.gather(dim, k.gather(dim, idx).argsort(dim=dim, stable=True))
+
+        return idx
+
+    sorted_indices = lexsort((bounding_boxes[:, 1], bounding_boxes[:, 2]))
+    sorted_boxes = bounding_boxes[sorted_indices]
+    # Получаем class_id как long-тензор (для индексирования в словаре)
+    class_ids = sorted_boxes[:, 0].long()
+
+    # Генерация LaTeX-кода (собираем строки через join для эффективности)
+    latex_code = "".join(
+        class_to_latex.get(int(class_id), "") for class_id in class_ids
+    )
 
     return latex_code
