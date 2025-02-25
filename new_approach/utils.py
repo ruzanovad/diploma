@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import cv2
 import numpy as np
 
+
 def get_bounding_boxes(filename, threshold=0.9):
     """
     Get bounding box in YOLO format
@@ -17,7 +18,9 @@ def get_bounding_boxes(filename, threshold=0.9):
     for pattern in types.keys():
         # Загрузим изображение и шаблон
         image = cv2.imread(filename, 0)
-        template = cv2.imread(os.path.join(patterns_dir, str(types[pattern]), "0.png"), 0)
+        template = cv2.imread(
+            os.path.join(patterns_dir, str(types[pattern]), "0.png"), 0
+        )
 
         w, h = template.shape[::-1]
         img_w, img_h = image.shape[::-1]
@@ -49,6 +52,7 @@ def get_bounding_boxes(filename, threshold=0.9):
             )
     return boxes
 
+
 def load_symbols_from_templates(template_dir):
     symbols_dict = {}
     code = 0
@@ -64,18 +68,46 @@ def load_symbols_from_templates(template_dir):
 
     return symbols_dict
 
+
 def generate_yolo_yaml(template_dir, dataset_dir, output_file):
     symbols_dict = load_symbols_from_templates(template_dir)
 
-    classes = {symbols_dict[key] : key for  key in symbols_dict.keys()}
+    classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
 
     yolo_config = {
-        'path': dataset_dir,
-        'train': 'images/train',
-        'val': 'images/val',
-        'nc': len(classes),
-        'names': classes
+        "path": dataset_dir,
+        "train": "images/train",
+        "val": "images/val",
+        "nc": len(classes),
+        "names": classes,
     }
 
-    with open(output_file, 'w') as file:
+    with open(output_file, "w") as file:
         yaml.dump(yolo_config, file, default_flow_style=False)
+
+
+def stupid_encoder(bounding_boxes: list[list], class_to_latex: dict):
+    """
+    Encodes bounding boxes into LaTeX code.
+
+    Parameters:
+    bounding_boxes (list): List of bounding boxes with format [class, x_center, y_center, width, height].
+    class_to_latex (dict): Dictionary mapping classes to LaTeX tags.
+
+    Returns:
+    str: Generated LaTeX code.
+    """
+    symbols_dict = load_symbols_from_templates(os.getenv("templates"))
+    class_to_latex = {symbols_dict[key]: key for key in symbols_dict.keys()}
+
+    # Sort bounding boxes from left to right and top to bottom
+    bounding_boxes.sort(key=lambda box: (float(box[0]), float(box[1])))
+
+    # Generate LaTeX code
+    latex_code = ""
+    for box in bounding_boxes:
+        class_id = box[0]
+        latex_tag = class_to_latex.get(class_id, "")
+        latex_code += latex_tag
+
+    return latex_code
