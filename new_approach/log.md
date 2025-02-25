@@ -56,3 +56,5 @@ for patterns it is easy because patterns bounding box is a whole picture width a
 нужно определить наименьшее множество шаблонов для получения  https://www.overleaf.com/learn/latex/Subscripts_and_superscripts
 
 рассматриваем LaTeX как формальный язык
+
+I deleted omicron and other greek letters because they doesn't exist in latex.
