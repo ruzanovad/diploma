@@ -14,3 +14,4 @@ new_approach/client01.json
 new_approach/gd.py
 new_approach/generated_token.json
 new_approach/token_oauth2client.json
+new_approach/.dvc/config
