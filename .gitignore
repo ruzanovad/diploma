@@ -10,3 +10,7 @@ tokenizer_ru.json
 *.aux
 *.png
 new_approach/yolo11n.pt
+new_approach/client01.json
+new_approach/gd.py
+new_approach/generated_token.json
+new_approach/token_oauth2client.json
