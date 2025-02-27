@@ -286,6 +286,6 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
 
 
 if __name__ == "__main__":
-    # generate_pattern()
-    generate_dataset(count=100)
+    generate_pattern()
+    generate_dataset(count=10000)
     # print(load_symbols_from_templates(os.getenv("templates")))
