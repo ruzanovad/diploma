@@ -236,8 +236,6 @@ def generate_greek(list_of_letters:list) -> str:
     )
 
 
-
-
 def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
     assert train + val == 100
     random.seed(seed)
