@@ -258,20 +258,20 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
     train_number = (count * train) // 100
     val_number = count - train_number
 
-    greek_letters = []
-    greek_path = os.path.join(os.getenv("templates"), "greek-letter.txt")
-    with open(greek_path, "r") as file:
-            for line in file:
-                symbol = line.strip()
-                greek_letters.append(symbol)
+    # greek_letters = []
+    # greek_path = os.path.join(os.getenv("templates"), "greek-letter.txt")
+    # with open(greek_path, "r") as file:
+    #         for line in file:
+    #             symbol = line.strip()
+    #             greek_letters.append(symbol)
                     
 
 
     for code in range(train_number):
-        fill_file(images_train_dir, labels_train_dir, code, greek_letters)
+        fill_file(images_train_dir, labels_train_dir, code)
 
     for code in range(train_number, train_number + val_number):
-        fill_file(images_val_dir, labels_val_dir, code, greek_letters)
+        fill_file(images_val_dir, labels_val_dir, code)
 
     # Clean up
     for ext in ["aux", "log", "dvi", "tex"]:
