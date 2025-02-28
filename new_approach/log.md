@@ -87,3 +87,5 @@ Box(P, R, mAP50, mAP50-95): This metric provides insights into the model's perfo
     mAP50-95: The average of the mean average precision calculated at varying IoU thresholds, ranging from 0.50 to 0.95. It gives a comprehensive view of the model's performance across different levels of detection difficulty.
 
 https://docs.ultralytics.com/guides/yolo-performance-metrics/#class-wise-metrics
+
+сначала надо делать датасет, а потом уже наращивать ...?   
