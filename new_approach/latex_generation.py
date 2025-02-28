@@ -146,21 +146,21 @@ def generate_one(current_prefix: str, template):
 
 
 def fill_file(images_dir, labels_dir, code, greek):
-    if greek==None:
-        raise Exception("Must provide greek alphabet")
-    choice = random.randint(0, 3)
+    # if greek==None:
+    #     raise Exception("Must provide greek alphabet")
+    choice = random.randint(0, 1)
     if choice == 0:
         content = generate_number()
         suffix = "number"
-    elif choice == 1:
+    else:
         content = generate_decimal()
         suffix = "decimal"
-    elif choice == 2:
-        content = generate_greek(greek)
-        suffix = "greek"
-    else:
-        content = generate_word()
-        suffix = "word"
+    # elif choice == 2:
+    #     content = generate_greek(greek)
+    #     suffix = "greek"
+    # else:
+    #     content = generate_word()
+    #     suffix = "word"
 
     temp_name = "%d_%s" % (code, suffix)
     current_file = os.path.join(images_dir, temp_name)
