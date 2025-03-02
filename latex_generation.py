@@ -5,6 +5,7 @@ import random
 from PIL import Image
 from dotenv import load_dotenv
 import utils
+import yaml
 
 
 load_dotenv()
@@ -145,7 +146,7 @@ def generate_one(current_prefix: str, template):
         delete_files_with_extension("", ext)
 
 
-def fill_file(images_dir, labels_dir, code, greek):
+def fill_file(images_dir, labels_dir, code, greek=None):
     # if greek==None:
     #     raise Exception("Must provide greek alphabet")
     choice = random.randint(0, 1)
@@ -213,6 +214,57 @@ def fill_file(images_dir, labels_dir, code, greek):
             file.write(" ".join(box) + "\n")
 
 
+def generate_one_with_label(images_dir, labels_dir, code, content: str, greek=None):
+    temp_name = "%d" % (code)
+    current_file = os.path.join(images_dir, temp_name)
+    tex_file = f"{current_file}.tex"
+    with open(tex_file, "w") as f:
+        f.write(latex % ("$" + content + "$"))
+
+    # Compile .tex to .dvi
+    tex_result = subprocess.run(
+        [
+            "latex",
+            "-interaction=nonstopmode",
+            os.path.basename(tex_file),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=images_dir,
+    )
+    if tex_result.returncode != 0:
+        print(f"Error compiling {tex_file}: {tex_result.stderr.decode()}")
+        return
+
+    # Convert .dvi to .png
+    dvi_file = f"{current_file}.dvi"
+    png_file = f"{current_file}.png"
+    dvi_result = subprocess.run(
+        [
+            "dvipng",
+            "-T",
+            "tight",
+            "-D",
+            "300",
+            "-o",
+            os.path.basename(png_file),
+            os.path.basename(dvi_file),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=images_dir,
+    )
+    if dvi_result.returncode != 0:
+        print(f"Error converting {dvi_file} to PNG: {dvi_result.stderr.decode()}")
+        return
+
+    txt_file = os.path.join(labels_dir, temp_name) + ".txt"
+    bounding_boxes = utils.get_bounding_boxes(png_file)
+
+    with open(txt_file, "w") as file:
+        for box in bounding_boxes:
+            file.write(" ".join(box) + "\n")
+
 def generate_number() -> str:
     return str(random.randint(0, 9999))
 
@@ -235,8 +287,54 @@ def generate_greek(list_of_letters:list) -> str:
         random.choices(list_of_letters, k=length)
     )
 
+def generate_dataset_only_templates():
+    """
+    for each class only one picture
+    """
+
+    base_dir = os.getenv("yolo_dataset_folder")
+    images_dir = os.path.join(base_dir, "images")
+    labels_dir = os.path.join(base_dir, "labels")
+
+    images_train_dir = os.path.join(images_dir, "train")
+    images_val_dir = os.path.join(images_dir, "val")
+    labels_train_dir = os.path.join(labels_dir, "train")
+    labels_val_dir = os.path.join(labels_dir, "val")
+
+    os.makedirs(images_train_dir, exist_ok=True)
+    os.makedirs(images_val_dir, exist_ok=True)
+    os.makedirs(labels_train_dir, exist_ok=True)
+    os.makedirs(labels_val_dir, exist_ok=True)
 
 
+    template_dir = os.getenv("templates")
+    symbols_dict = utils.load_symbols_from_templates(template_dir)
+    classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
+    
+    for code in range(len(classes)):
+        generate_one_with_label(images_train_dir, labels_train_dir,code, classes[code])
+
+    for code in range(len(classes), 2*len(classes)):
+        fill_file(images_val_dir, labels_val_dir, code)
+
+    # Clean up
+    for ext in ["aux", "log", "dvi", "tex"]:
+        delete_files_with_extension(images_train_dir, ext)
+        delete_files_with_extension(images_val_dir, ext)
+
+    dataset_dir = os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder")))
+   
+
+    yolo_config = {
+        "path": dataset_dir,
+        "train": "images/train",
+        "val": "images/val",
+        "nc": len(classes),
+        "names": classes,
+    }
+
+    with open("dataset.yaml", "w") as file:
+        yaml.dump(yolo_config, file, default_flow_style=False)
 
 def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
     assert train + val == 100
@@ -287,5 +385,6 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
 
 if __name__ == "__main__":
     generate_pattern()
-    generate_dataset(count=10000)
+    # generate_dataset(count=10000)
+    generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))
