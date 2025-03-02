@@ -6,6 +6,7 @@ from PIL import Image
 from dotenv import load_dotenv
 import utils
 import yaml
+import numpy as np
 
 
 load_dotenv()
@@ -146,22 +147,7 @@ def generate_one(current_prefix: str, template):
         delete_files_with_extension("", ext)
 
 
-def fill_file(images_dir, labels_dir, code, greek=None):
-    # if greek==None:
-    #     raise Exception("Must provide greek alphabet")
-    choice = random.randint(0, 1)
-    if choice == 0:
-        content = generate_number()
-        suffix = "number"
-    else:
-        content = generate_decimal()
-        suffix = "decimal"
-    # elif choice == 2:
-    #     content = generate_greek(greek)
-    #     suffix = "greek"
-    # else:
-    #     content = generate_word()
-    #     suffix = "word"
+def fill_file(images_dir, labels_dir, code, content, suffix):
 
     temp_name = "%d_%s" % (code, suffix)
     current_file = os.path.join(images_dir, temp_name)
@@ -265,6 +251,7 @@ def generate_one_with_label(images_dir, labels_dir, code, content: str, greek=No
         for box in bounding_boxes:
             file.write(" ".join(box) + "\n")
 
+
 def generate_number() -> str:
     return str(random.randint(0, 9999))
 
@@ -281,11 +268,11 @@ def generate_word() -> str:
         random.choices("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", k=length)
     )
 
-def generate_greek(list_of_letters:list) -> str:
+
+def generate_greek(list_of_letters: list) -> str:
     length = random.randint(10, 45)
-    return "".join(
-        random.choices(list_of_letters, k=length)
-    )
+    return "".join(random.choices(list_of_letters, k=length))
+
 
 def generate_dataset_only_templates():
     """
@@ -306,15 +293,14 @@ def generate_dataset_only_templates():
     os.makedirs(labels_train_dir, exist_ok=True)
     os.makedirs(labels_val_dir, exist_ok=True)
 
-
     template_dir = os.getenv("templates")
     symbols_dict = utils.load_symbols_from_templates(template_dir)
     classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
-    
-    for code in range(len(classes)):
-        generate_one_with_label(images_train_dir, labels_train_dir,code, classes[code])
 
-    for code in range(len(classes), 2*len(classes)):
+    for code in range(len(classes)):
+        generate_one_with_label(images_train_dir, labels_train_dir, code, classes[code])
+
+    for code in range(len(classes), 2 * len(classes)):
         fill_file(images_val_dir, labels_val_dir, code)
 
     # Clean up
@@ -323,7 +309,6 @@ def generate_dataset_only_templates():
         delete_files_with_extension(images_val_dir, ext)
 
     dataset_dir = os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder")))
-   
 
     yolo_config = {
         "path": dataset_dir,
@@ -335,6 +320,7 @@ def generate_dataset_only_templates():
 
     with open("dataset.yaml", "w") as file:
         yaml.dump(yolo_config, file, default_flow_style=False)
+
 
 def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
     assert train + val == 100
@@ -356,20 +342,33 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
     train_number = (count * train) // 100
     val_number = count - train_number
 
-    # greek_letters = []
-    # greek_path = os.path.join(os.getenv("templates"), "greek-letter.txt")
-    # with open(greek_path, "r") as file:
-    #         for line in file:
-    #             symbol = line.strip()
-    #             greek_letters.append(symbol)
-                    
+    symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
 
+
+    classes = [
+        key if len(key) == 1 else key + " "
+        for key in symbols_dict.keys()
+    ]
+
+    lengths = np.random.randint(20, 41, count).tolist()
 
     for code in range(train_number):
-        fill_file(images_train_dir, labels_train_dir, code)
+        fill_file(
+            images_train_dir,
+            labels_train_dir,
+            code,
+            ''.join(random.choices(classes, k=lengths[code])),
+            "",
+        )
 
     for code in range(train_number, train_number + val_number):
-        fill_file(images_val_dir, labels_val_dir, code)
+        fill_file(
+            images_val_dir,
+            labels_val_dir,
+            code,
+            ''.join(random.choices(classes, k=lengths[code])),
+            "",
+        )
 
     # Clean up
     for ext in ["aux", "log", "dvi", "tex"]:
@@ -384,7 +383,7 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
 
 
 if __name__ == "__main__":
-    generate_pattern()
-    # generate_dataset(count=10000)
-    generate_dataset_only_templates()
+    # generate_pattern()
+    generate_dataset(count=100)
+    # generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))
