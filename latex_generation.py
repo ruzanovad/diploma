@@ -4,6 +4,8 @@ import glob
 import random
 from PIL import Image
 from dotenv import load_dotenv
+from concurrent.futures import ProcessPoolExecutor # for concurrency
+from functools import partial # for concurrency
 import utils
 import yaml
 import numpy as np
@@ -147,7 +149,19 @@ def generate_one(current_prefix: str, template):
         delete_files_with_extension("", ext)
 
 
-def fill_file(images_dir, labels_dir, code, content, suffix):
+def fill_file_job(args):
+    """
+    Multiprocessing-compatible function.
+    Receives a tuple (code, content, images_dir, labels_dir, verbose, print_every)
+    """
+    code, content, class_dict, images_dir, labels_dir, verbose = args
+
+    fill_file(images_dir, labels_dir, code, content, class_dict, suffix="")
+
+    if verbose>1 and code % verbose == 0:
+        print(f"[INFO] Processed {code} samples...")
+
+def fill_file(images_dir, labels_dir, code, content, class_dict : dict, suffix):
 
     temp_name = "%d_%s" % (code, suffix)
     current_file = os.path.join(images_dir, temp_name)
@@ -193,14 +207,16 @@ def fill_file(images_dir, labels_dir, code, content, suffix):
         return
 
     txt_file = os.path.join(labels_dir, temp_name) + ".txt"
-    bounding_boxes = utils.get_bounding_boxes(png_file)
+    print("content",  content)
+    print(class_dict)
+    bounding_boxes = utils.get_bounding_boxes(png_file, class_dict)
 
     with open(txt_file, "w") as file:
         for box in bounding_boxes:
             file.write(" ".join(box) + "\n")
 
 
-def generate_one_with_label(images_dir, labels_dir, code, content: str, greek=None):
+def generate_one_with_label(images_dir, labels_dir, code, content: str):
     temp_name = "%d" % (code)
     current_file = os.path.join(images_dir, temp_name)
     tex_file = f"{current_file}.tex"
@@ -245,6 +261,7 @@ def generate_one_with_label(images_dir, labels_dir, code, content: str, greek=No
         return
 
     txt_file = os.path.join(labels_dir, temp_name) + ".txt"
+    
     bounding_boxes = utils.get_bounding_boxes(png_file)
 
     with open(txt_file, "w") as file:
@@ -322,9 +339,13 @@ def generate_dataset_only_templates():
         yaml.dump(yolo_config, file, default_flow_style=False)
 
 
-def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
+def generate_dataset(level="number", count=1000, seed=42, train=80, val=20, verbose=100):
+    """
+    Generates dataset in parallel using multiprocessing with optional verbose logging.
+    """
     assert train + val == 100
     random.seed(seed)
+
     base_dir = os.getenv("yolo_dataset_folder")
     images_dir = os.path.join(base_dir, "images")
     labels_dir = os.path.join(base_dir, "labels")
@@ -342,39 +363,41 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
     train_number = (count * train) // 100
     val_number = count - train_number
 
+    # Load classes from templates
     symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
-
-
     classes = [
         key if len(key) == 1 else key + " "
         for key in symbols_dict.keys()
     ]
-
     lengths = np.random.randint(20, 41, count).tolist()
 
-    for code in range(train_number):
-        fill_file(
-            images_train_dir,
-            labels_train_dir,
-            code,
-            ''.join(random.choices(classes, k=lengths[code])),
-            "",
-        )
+    def get_random_content(idx):
+        """Генерирует случайное выражение и список использованных классов"""
+        selected_classes = random.choices(classes, k=lengths[idx])
+        expression = ''.join(selected_classes)
+        return expression, {key.strip(): symbols_dict[key.strip()] for key in selected_classes}
 
-    for code in range(train_number, train_number + val_number):
-        fill_file(
-            images_val_dir,
-            labels_val_dir,
-            code,
-            ''.join(random.choices(classes, k=lengths[code])),
-            "",
-        )
+    # Prepare argument lists for parallel execution
+    train_args = [(i, *get_random_content(i), images_train_dir, labels_train_dir, verbose) 
+                  for i in range(train_number)]
+    
+    val_args = [(i, *get_random_content(i), images_val_dir, labels_val_dir, verbose) 
+                for i in range(train_number, train_number + val_number)]
 
-    # Clean up
+    # --- Generate the TRAIN set in parallel ---
+    with ProcessPoolExecutor(max_workers=6) as executor:
+        executor.map(fill_file_job, train_args)
+
+    # --- Generate the VAL set in parallel ---
+    with ProcessPoolExecutor(max_workers=6) as executor:
+        executor.map(fill_file_job, val_args)
+
+    # Finally clean up aux files
     for ext in ["aux", "log", "dvi", "tex"]:
         delete_files_with_extension(images_train_dir, ext)
         delete_files_with_extension(images_val_dir, ext)
 
+    # Generate dataset.yaml
     utils.generate_yolo_yaml(
         os.getenv("templates"),
         os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder"))),
@@ -383,7 +406,8 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20):
 
 
 if __name__ == "__main__":
-    # generate_pattern()
-    generate_dataset(count=100)
+    generate_pattern()
+    # print("dataset done")
+    generate_dataset(count=10)
     # generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))
