@@ -6,21 +6,21 @@ import numpy as np
 import torch
 
 
-def get_bounding_boxes(filename, threshold=0.9):
+def get_bounding_boxes(filename, class_dict:dict, threshold=0.9):
     """
     Get bounding box in YOLO format
     """
     load_dotenv()
     patterns_dir = os.getenv("patterns_folder")
 
-    types = load_symbols_from_templates(os.getenv("templates"))
+    # types = load_symbols_from_templates(os.getenv("templates"))
 
     boxes = []
-    for pattern in types.keys():
+    for pattern in class_dict.keys():
         # Загрузим изображение и шаблон
         image = cv2.imread(filename, 0)
         template = cv2.imread(
-            os.path.join(patterns_dir, str(types[pattern]), "0.png"), 0
+            os.path.join(patterns_dir, str(class_dict[pattern]), "0.png"), 0
         )
 
         w, h = template.shape[::-1]
@@ -42,7 +42,7 @@ def get_bounding_boxes(filename, threshold=0.9):
                     map(
                         str,
                         [
-                            types[pattern],
+                            class_dict[pattern],
                             str((pt[0] + w * 0.5) / img_w),
                             str((pt[1] + h * 0.5) / img_h),
                             str(w / img_w),
