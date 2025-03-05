@@ -207,8 +207,7 @@ def fill_file(images_dir, labels_dir, code, content, class_dict : dict, suffix):
         return
 
     txt_file = os.path.join(labels_dir, temp_name) + ".txt"
-    print("content",  content)
-    print(class_dict)
+
     bounding_boxes = utils.get_bounding_boxes(png_file, class_dict)
 
     with open(txt_file, "w") as file:
@@ -339,7 +338,7 @@ def generate_dataset_only_templates():
         yaml.dump(yolo_config, file, default_flow_style=False)
 
 
-def generate_dataset(level="number", count=1000, seed=42, train=80, val=20, verbose=100):
+def generate_dataset(level="number", count=1000, seed=42, train=90, val=10, verbose=100):
     """
     Generates dataset in parallel using multiprocessing with optional verbose logging.
     """
@@ -406,8 +405,8 @@ def generate_dataset(level="number", count=1000, seed=42, train=80, val=20, verb
 
 
 if __name__ == "__main__":
-    generate_pattern()
+    # generate_pattern()
     # print("dataset done")
-    generate_dataset(count=10)
+    generate_dataset(count=100)
     # generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))
