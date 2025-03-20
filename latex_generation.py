@@ -1,3 +1,4 @@
+from math import e
 import subprocess
 import os
 import glob
@@ -31,8 +32,8 @@ def delete_files_with_extension(directory, extension):
             # print(f"Error deleting {file_path}: {e}")
 
 
-def generate_pattern(level="number"):
-    base_dir = os.getenv("patterns_folder")
+def generate_pattern(label, level="number"):
+    base_dir = os.path.join("datasets", label, "patterns")
 
     os.makedirs(base_dir, exist_ok=True)
     match level:
@@ -169,15 +170,20 @@ def fill_file_job(args):
     Multiprocessing-compatible function.
     Receives a tuple (code, content, images_dir, labels_dir, verbose, print_every)
     """
-    code, content, class_dict, images_dir, labels_dir, verbose = args
+    code, content, class_dict, images_dir, labels_dir, verbose, label = args
+    try:
 
-    fill_file(images_dir, labels_dir, code, content, class_dict, suffix="")
+        fill_file(
+            images_dir, labels_dir, code, content, class_dict, suffix="", label=label
+        )
 
-    if verbose > 1 and code % verbose == 0:
-        print(f"[INFO] Processed {code} samples...")
+        if verbose > 1 and code % verbose == 0:
+            print(f"[INFO] Processed {code} samples...")
+    except Exception as e:
+        print(f"Error processing {code}: {e}")
 
 
-def fill_file(images_dir, labels_dir, code, content, class_dict: dict, suffix):
+def fill_file(images_dir, labels_dir, code, content, class_dict: dict, suffix, label):
 
     temp_name = "%d_%s" % (code, suffix)
     current_file = os.path.join(images_dir, temp_name)
@@ -224,14 +230,14 @@ def fill_file(images_dir, labels_dir, code, content, class_dict: dict, suffix):
 
     txt_file = os.path.join(labels_dir, temp_name) + ".txt"
 
-    bounding_boxes = utils.get_bounding_boxes(png_file, class_dict)
+    bounding_boxes = utils.get_bounding_boxes(png_file, class_dict, label)
 
     with open(txt_file, "w") as file:
         for box in bounding_boxes:
             file.write(" ".join(box) + "\n")
 
 
-def generate_one_with_label(images_dir, labels_dir, code, content: str):
+def generate_one_with_label(images_dir, labels_dir, code, label, content: str):
     temp_name = "%d" % (code)
     current_file = os.path.join(images_dir, temp_name)
     tex_file = f"{current_file}.tex"
@@ -277,7 +283,7 @@ def generate_one_with_label(images_dir, labels_dir, code, content: str):
 
     txt_file = os.path.join(labels_dir, temp_name) + ".txt"
 
-    bounding_boxes = utils.get_bounding_boxes(png_file)
+    bounding_boxes = utils.get_bounding_boxes(png_file, label=label)
 
     with open(txt_file, "w") as file:
         for box in bounding_boxes:
@@ -372,7 +378,13 @@ def generate_greek(list_of_letters: list, symbols_dict) -> str:
 
 
 def generate_dataset(
-    level="number", count=1000, seed=42, train=90, val=10, verbose=100
+    label,
+    level="number",
+    count=1000,
+    seed=42,
+    train=90,
+    val=10,
+    verbose=100,
 ):
     """
     Generates dataset in parallel using multiprocessing with optional verbose logging.
@@ -380,7 +392,7 @@ def generate_dataset(
     assert train + val == 100
     random.seed(seed)
 
-    base_dir = os.getenv("yolo_dataset_folder")
+    base_dir = os.path.join("datasets", label, "dataset")
     images_dir = os.path.join(base_dir, "images")
     labels_dir = os.path.join(base_dir, "labels")
 
@@ -409,6 +421,7 @@ def generate_dataset(
                     images_train_dir,
                     labels_train_dir,
                     verbose,
+                    label,
                 )
                 for i in range(train_number)
             ]
@@ -420,12 +433,13 @@ def generate_dataset(
                     images_val_dir,
                     labels_val_dir,
                     verbose,
+                    label,
                 )
                 for i in range(train_number, train_number + val_number)
             ]
         case "variable":
             symbols_dict = utils.load_symbols_from_templates(
-                os.getenv("templates"),
+                template_dir=os.getenv("templates"),
                 all=False,
                 files=["number.txt", "delimiter.txt", "letter.txt", "greek-letter.txt"],
             )
@@ -436,6 +450,7 @@ def generate_dataset(
                     images_train_dir,
                     labels_train_dir,
                     verbose,
+                    label,
                 )
                 for i in range(train_number)
             ]
@@ -447,6 +462,7 @@ def generate_dataset(
                     images_val_dir,
                     labels_val_dir,
                     verbose,
+                    label,
                 )
                 for i in range(train_number, train_number + val_number)
             ]
@@ -468,12 +484,26 @@ def generate_dataset(
 
             # Prepare argument lists for parallel execution
             train_args = [
-                (i, *get_random_content(i), images_train_dir, labels_train_dir, verbose)
+                (
+                    i,
+                    *get_random_content(i),
+                    images_train_dir,
+                    labels_train_dir,
+                    verbose,
+                    label,
+                )
                 for i in range(train_number)
             ]
 
             val_args = [
-                (i, *get_random_content(i), images_val_dir, labels_val_dir, verbose)
+                (
+                    i,
+                    *get_random_content(i),
+                    images_val_dir,
+                    labels_val_dir,
+                    verbose,
+                    label,
+                )
                 for i in range(train_number, train_number + val_number)
             ]
         case _:
@@ -491,18 +521,42 @@ def generate_dataset(
     for ext in ["aux", "log", "dvi", "tex"]:
         delete_files_with_extension(images_train_dir, ext)
         delete_files_with_extension(images_val_dir, ext)
-
     # Generate dataset.yaml
-    utils.generate_yolo_yaml(
-        os.getenv("templates"),
-        os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder"))),
-        "dataset.yaml",
-    )
+    match level:
+        case "number":
+            utils.generate_yolo_yaml(
+                os.getenv("templates"),
+                os.path.join("datasets", label, "dataset.yaml"),
+                label,
+                all=False,
+                files=["number.txt", "delimiter.txt"],
+            )
+        case "variable":
+            utils.generate_yolo_yaml(
+                os.getenv("templates"),
+                os.path.join("datasets", label, "dataset.yaml"),
+                label,
+                all=False,
+                files=[
+                    "number.txt",
+                    "delimiter.txt",
+                    "letter.txt",
+                    "greek-letter.txt",
+                ],
+            )
+        case "all":
+            utils.generate_yolo_yaml(
+                os.getenv("templates"),
+                os.path.join("datasets", label, "dataset.yaml"),
+                label,
+            )
+        case _:
+            raise ValueError("Unknown level")
 
 
 if __name__ == "__main__":
-    generate_pattern()
+    generate_pattern(level="number", label="number")
     print("patterns done")
-    generate_dataset(count=1000, level="number")
+    generate_dataset(count=1000, level="number", label="number")
     # generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))

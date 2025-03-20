@@ -6,14 +6,12 @@ import numpy as np
 import torch
 
 
-def get_bounding_boxes(filename, class_dict:dict, threshold=0.9):
+def get_bounding_boxes(filename, class_dict: dict, label, threshold=0.9):
     """
     Get bounding box in YOLO format
     """
     load_dotenv()
-    patterns_dir = os.getenv("patterns_folder")
-
-    # types = load_symbols_from_templates(os.getenv("templates"))
+    patterns_dir = os.path.join("datasets", label, "patterns")
 
     boxes = []
     for pattern in class_dict.keys():
@@ -55,7 +53,9 @@ def get_bounding_boxes(filename, class_dict:dict, threshold=0.9):
 
 
 def load_symbols_from_templates(template_dir, all=True, files=[]):
-    assert all ^ (len(files) > 0), "Either all templates or specific files should be loaded."
+    assert all ^ (
+        len(files) > 0
+    ), "Either all templates or specific files should be loaded."
     symbols_dict = {}
     code = 0
 
@@ -71,13 +71,15 @@ def load_symbols_from_templates(template_dir, all=True, files=[]):
     return symbols_dict
 
 
-def generate_yolo_yaml(template_dir, dataset_dir, output_file, all=True, files=[]):
+def generate_yolo_yaml(
+    template_dir, output_file, label, all=True, files=[]
+):
     symbols_dict = load_symbols_from_templates(template_dir, all, files)
 
     classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
 
     yolo_config = {
-        "path": dataset_dir,
+        "path": os.path.join("datasets", label, "dataset"),
         "train": "images/train",
         "val": "images/val",
         "nc": len(classes),
@@ -92,7 +94,12 @@ def get_inverted_dict(dictionary):
     return {v: k for k, v in dictionary.items()}
 
 
-def stupid_encoder(bounding_boxes: torch.Tensor, class_to_latex: dict = None, all=True, files=[]):
+def stupid_encoder(
+    bounding_boxes: torch.Tensor,
+    class_to_latex: dict = None,
+    all=True,
+    files=[],
+):
     """
     Encodes bounding boxes into LaTeX code using naive approach.
 
@@ -105,7 +112,9 @@ def stupid_encoder(bounding_boxes: torch.Tensor, class_to_latex: dict = None, al
     """
     if class_to_latex == None:
         class_to_latex = get_inverted_dict(
-            load_symbols_from_templates(os.getenv("templates"), all, files)
+            load_symbols_from_templates(
+                os.getenv("templates"), all, files
+            )
         )
 
     bounding_boxes = bounding_boxes.to("cpu")
