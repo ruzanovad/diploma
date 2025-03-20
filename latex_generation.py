@@ -4,8 +4,8 @@ import glob
 import random
 from PIL import Image
 from dotenv import load_dotenv
-from concurrent.futures import ProcessPoolExecutor # for concurrency
-from functools import partial # for concurrency
+from concurrent.futures import ProcessPoolExecutor  # for concurrency
+from functools import partial  # for concurrency
 import utils
 import yaml
 import numpy as np
@@ -31,12 +31,27 @@ def delete_files_with_extension(directory, extension):
             # print(f"Error deleting {file_path}: {e}")
 
 
-def generate_pattern():
+def generate_pattern(level="number"):
     base_dir = os.getenv("patterns_folder")
 
     os.makedirs(base_dir, exist_ok=True)
-
-    templates = utils.load_symbols_from_templates(os.getenv("templates"))
+    match level:
+        case "number":
+            templates = utils.load_symbols_from_templates(
+                os.getenv("templates"), all=False, files=["number.txt", "delimiter.txt"]
+            )
+        case "variable":
+            templates = utils.load_symbols_from_templates(
+                os.getenv("templates"),
+                all=False,
+                files=["number.txt", "delimiter.txt", "letter.txt", "greek-letter.txt"],
+            )
+        case "all":
+            templates = utils.load_symbols_from_templates(
+                os.getenv("templates"), all=True
+            )
+        case _:
+            raise ValueError("Unknown level")
 
     for token, class_number in templates.items():
         # for number in map(str, range(0, 10)):
@@ -158,10 +173,11 @@ def fill_file_job(args):
 
     fill_file(images_dir, labels_dir, code, content, class_dict, suffix="")
 
-    if verbose>1 and code % verbose == 0:
+    if verbose > 1 and code % verbose == 0:
         print(f"[INFO] Processed {code} samples...")
 
-def fill_file(images_dir, labels_dir, code, content, class_dict : dict, suffix):
+
+def fill_file(images_dir, labels_dir, code, content, class_dict: dict, suffix):
 
     temp_name = "%d_%s" % (code, suffix)
     current_file = os.path.join(images_dir, temp_name)
@@ -260,7 +276,7 @@ def generate_one_with_label(images_dir, labels_dir, code, content: str):
         return
 
     txt_file = os.path.join(labels_dir, temp_name) + ".txt"
-    
+
     bounding_boxes = utils.get_bounding_boxes(png_file)
 
     with open(txt_file, "w") as file:
@@ -272,73 +288,86 @@ def generate_number() -> str:
     return str(random.randint(0, 9999))
 
 
-def generate_decimal() -> str:
+def generate_decimal(symbols_dict) -> str:
     integer_part = random.randint(0, 9999)
     decimal_part = random.randint(0, 9999)
-    return f"{integer_part}.{decimal_part}"
+    delim = random.choice(['.', ','])
+    classes = set(integer_part) | set(decimal_part) | set(delim)
+
+    return f"{integer_part}{delim}{decimal_part}", classes
 
 
-def generate_word() -> str:
-    length = random.randint(10, 45)
-    return "".join(
+def generate_word(symbols_dict) -> str:
+    length = random.randint(1, 5)
+    text = "".join(
         random.choices("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", k=length)
     )
+    return text, set(text)
 
 
-def generate_greek(list_of_letters: list) -> str:
-    length = random.randint(10, 45)
+def generate_variable(symbols_dict) -> str:
+    choice = random.randint(0, 1)
+    decimal = generate_decimal()
+    word = generate_word() if choice else generate_greek()
+    return f"{decimal}{word}"
+
+
+def generate_greek(list_of_letters: list, symbols_dict) -> str:
+    length = random.randint(1, 5)
     return "".join(random.choices(list_of_letters, k=length))
 
 
-def generate_dataset_only_templates():
-    """
-    for each class only one picture
-    """
+# def generate_dataset_only_templates():
+#     """
+#     for each class only one picture
+#     """
 
-    base_dir = os.getenv("yolo_dataset_folder")
-    images_dir = os.path.join(base_dir, "images")
-    labels_dir = os.path.join(base_dir, "labels")
+#     base_dir = os.getenv("yolo_dataset_folder")
+#     images_dir = os.path.join(base_dir, "images")
+#     labels_dir = os.path.join(base_dir, "labels")
 
-    images_train_dir = os.path.join(images_dir, "train")
-    images_val_dir = os.path.join(images_dir, "val")
-    labels_train_dir = os.path.join(labels_dir, "train")
-    labels_val_dir = os.path.join(labels_dir, "val")
+#     images_train_dir = os.path.join(images_dir, "train")
+#     images_val_dir = os.path.join(images_dir, "val")
+#     labels_train_dir = os.path.join(labels_dir, "train")
+#     labels_val_dir = os.path.join(labels_dir, "val")
 
-    os.makedirs(images_train_dir, exist_ok=True)
-    os.makedirs(images_val_dir, exist_ok=True)
-    os.makedirs(labels_train_dir, exist_ok=True)
-    os.makedirs(labels_val_dir, exist_ok=True)
+#     os.makedirs(images_train_dir, exist_ok=True)
+#     os.makedirs(images_val_dir, exist_ok=True)
+#     os.makedirs(labels_train_dir, exist_ok=True)
+#     os.makedirs(labels_val_dir, exist_ok=True)
 
-    template_dir = os.getenv("templates")
-    symbols_dict = utils.load_symbols_from_templates(template_dir)
-    classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
+#     template_dir = os.getenv("templates")
+#     symbols_dict = utils.load_symbols_from_templates(template_dir)
+#     classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
 
-    for code in range(len(classes)):
-        generate_one_with_label(images_train_dir, labels_train_dir, code, classes[code])
+#     for code in range(len(classes)):
+#         generate_one_with_label(images_train_dir, labels_train_dir, code, classes[code])
 
-    for code in range(len(classes), 2 * len(classes)):
-        fill_file(images_val_dir, labels_val_dir, code)
+#     for code in range(len(classes), 2 * len(classes)):
+#         fill_file(images_val_dir, labels_val_dir, code)
 
-    # Clean up
-    for ext in ["aux", "log", "dvi", "tex"]:
-        delete_files_with_extension(images_train_dir, ext)
-        delete_files_with_extension(images_val_dir, ext)
+#     # Clean up
+#     for ext in ["aux", "log", "dvi", "tex"]:
+#         delete_files_with_extension(images_train_dir, ext)
+#         delete_files_with_extension(images_val_dir, ext)
 
-    dataset_dir = os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder")))
+#     dataset_dir = os.path.basename(os.path.normpath(os.getenv("yolo_dataset_folder")))
 
-    yolo_config = {
-        "path": dataset_dir,
-        "train": "images/train",
-        "val": "images/val",
-        "nc": len(classes),
-        "names": classes,
-    }
+#     yolo_config = {
+#         "path": dataset_dir,
+#         "train": "images/train",
+#         "val": "images/val",
+#         "nc": len(classes),
+#         "names": classes,
+#     }
 
-    with open("dataset.yaml", "w") as file:
-        yaml.dump(yolo_config, file, default_flow_style=False)
+#     with open("dataset.yaml", "w") as file:
+#         yaml.dump(yolo_config, file, default_flow_style=False)
 
 
-def generate_dataset(level="number", count=1000, seed=42, train=90, val=10, verbose=100):
+def generate_dataset(
+    level="number", count=1000, seed=42, train=90, val=10, verbose=100
+):
     """
     Generates dataset in parallel using multiprocessing with optional verbose logging.
     """
@@ -362,26 +391,49 @@ def generate_dataset(level="number", count=1000, seed=42, train=90, val=10, verb
     train_number = (count * train) // 100
     val_number = count - train_number
 
-    # Load classes from templates
-    symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
-    classes = [
-        key if len(key) == 1 else key + " "
-        for key in symbols_dict.keys()
-    ]
-    lengths = np.random.randint(20, 41, count).tolist()
+    match level:
+        case "number":
+            symbols_dict = utils.load_symbols_from_templates(
+                os.getenv("templates"), all=False, files=["number.txt", "delimiter.txt"]
+            )
 
-    def get_random_content(idx):
-        """Генерирует случайное выражение и список использованных классов"""
-        selected_classes = random.choices(classes, k=lengths[idx])
-        expression = ''.join(selected_classes)
-        return expression, {key.strip(): symbols_dict[key.strip()] for key in selected_classes}
+            classes = [key for key in symbols_dict.keys()]
+            lengths = np.random.randint(1, 10, count).tolist()
+        case "variable":
+            symbols_dict = utils.load_symbols_from_templates(
+                os.getenv("templates"), all=False, files=["number.txt", "delimiter.txt", "letter.txt", "greek-letter.txt"]
+            )
 
-    # Prepare argument lists for parallel execution
-    train_args = [(i, *get_random_content(i), images_train_dir, labels_train_dir, verbose) 
-                  for i in range(train_number)]
-    
-    val_args = [(i, *get_random_content(i), images_val_dir, labels_val_dir, verbose) 
-                for i in range(train_number, train_number + val_number)]
+            classes = [key for key in symbols_dict.keys()]
+            lengths = np.random.randint(1, 10, count).tolist()
+        case "all":
+            # Load classes from templates
+            symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
+            classes = [
+                key if len(key) == 1 else key + " " for key in symbols_dict.keys()
+            ]
+            lengths = np.random.randint(2, 20, count).tolist()
+
+            def get_random_content(idx):
+                """Генерирует случайное выражение и список использованных классов"""
+                selected_classes = random.choices(classes, k=lengths[idx])
+                expression = "".join(selected_classes)
+                return expression, {
+                    key.strip(): symbols_dict[key.strip()] for key in selected_classes
+                }
+
+            # Prepare argument lists for parallel execution
+            train_args = [
+                (i, *get_random_content(i), images_train_dir, labels_train_dir, verbose)
+                for i in range(train_number)
+            ]
+
+            val_args = [
+                (i, *get_random_content(i), images_val_dir, labels_val_dir, verbose)
+                for i in range(train_number, train_number + val_number)
+            ]
+        case _:
+            raise ValueError("Unknown level")
 
     # --- Generate the TRAIN set in parallel ---
     with ProcessPoolExecutor(max_workers=6) as executor:
@@ -407,6 +459,6 @@ def generate_dataset(level="number", count=1000, seed=42, train=90, val=10, verb
 if __name__ == "__main__":
     # generate_pattern()
     # print("dataset done")
-    generate_dataset(count=100)
+    generate_dataset(count=10000)
     # generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))

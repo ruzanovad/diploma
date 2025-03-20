@@ -54,12 +54,13 @@ def get_bounding_boxes(filename, class_dict:dict, threshold=0.9):
     return boxes
 
 
-def load_symbols_from_templates(template_dir):
+def load_symbols_from_templates(template_dir, all=True, files=[]):
+    assert all ^ (len(files) > 0), "Either all templates or specific files should be loaded."
     symbols_dict = {}
     code = 0
 
     for template_file in os.listdir(template_dir):
-        if template_file.endswith(".txt"):
+        if template_file.endswith(".txt") and (all or template_file in files):
             with open(os.path.join(template_dir, template_file), "r") as file:
                 for line in file:
                     symbol = line.strip()
@@ -70,8 +71,8 @@ def load_symbols_from_templates(template_dir):
     return symbols_dict
 
 
-def generate_yolo_yaml(template_dir, dataset_dir, output_file):
-    symbols_dict = load_symbols_from_templates(template_dir)
+def generate_yolo_yaml(template_dir, dataset_dir, output_file, all=True, files=[]):
+    symbols_dict = load_symbols_from_templates(template_dir, all, files)
 
     classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
 
@@ -91,7 +92,7 @@ def get_inverted_dict(dictionary):
     return {v: k for k, v in dictionary.items()}
 
 
-def stupid_encoder(bounding_boxes: torch.Tensor, class_to_latex: dict = None):
+def stupid_encoder(bounding_boxes: torch.Tensor, class_to_latex: dict = None, all=True, files=[]):
     """
     Encodes bounding boxes into LaTeX code using naive approach.
 
@@ -104,7 +105,7 @@ def stupid_encoder(bounding_boxes: torch.Tensor, class_to_latex: dict = None):
     """
     if class_to_latex == None:
         class_to_latex = get_inverted_dict(
-            load_symbols_from_templates(os.getenv("templates"))
+            load_symbols_from_templates(os.getenv("templates"), all, files)
         )
 
     bounding_boxes = bounding_boxes.to("cpu")

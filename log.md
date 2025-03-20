@@ -91,3 +91,6 @@ https://docs.ultralytics.com/guides/yolo-performance-metrics/#class-wise-metrics
 сначала надо делать датасет, а потом уже наращивать ...?   
 
 ignoring corrupt image/label: image size (5, 5) <10 pixels
+
+длинные изображения  в длину - 1300 пикселей, для обучения YOLO требует квадратные изображения поэтому проблематично 
+использовать большой размер  

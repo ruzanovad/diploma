@@ -1,0 +1,10 @@
+# Основные библиотеки
+numpy
+Pillow
+python-dotenv
+pyyaml
+opencv-python
+torch
+torchvision
+ultralytics
+tensorboard
