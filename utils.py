@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 
-def get_bounding_boxes(filename, class_dict: dict, label, threshold=0.9):
+def get_bounding_boxes(filename, class_dict: dict, label, threshold=0.95):
     """
     Get bounding box in YOLO format
     """
@@ -79,7 +79,7 @@ def generate_yolo_yaml(
     classes = {symbols_dict[key]: key for key in symbols_dict.keys()}
 
     yolo_config = {
-        "path": os.path.join("datasets", label, "dataset"),
+        "path": os.path.join(label, "dataset"),
         "train": "images/train",
         "val": "images/val",
         "nc": len(classes),
