@@ -289,12 +289,14 @@ def generate_number() -> str:
 
 
 def generate_decimal(symbols_dict) -> str:
-    integer_part = random.randint(0, 9999)
-    decimal_part = random.randint(0, 9999)
-    delim = random.choice(['.', ','])
+    integer_part = str(random.randint(0, 9999))
+    decimal_part = str(random.randint(0, 9999))
+    delim = random.choice([".", ","])
     classes = set(integer_part) | set(decimal_part) | set(delim)
 
-    return f"{integer_part}{delim}{decimal_part}", classes
+    return f"{integer_part}{delim}{decimal_part}", {
+        key.strip(): symbols_dict[key.strip()] for key in classes
+    }
 
 
 def generate_word(symbols_dict) -> str:
@@ -302,19 +304,23 @@ def generate_word(symbols_dict) -> str:
     text = "".join(
         random.choices("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", k=length)
     )
-    return text, set(text)
+    return text, {key.strip(): symbols_dict[key.strip()] for key in text}
 
 
 def generate_variable(symbols_dict) -> str:
     choice = random.randint(0, 1)
-    decimal = generate_decimal()
-    word = generate_word() if choice else generate_greek()
-    return f"{decimal}{word}"
+    decimal, decimal_dict = generate_decimal(symbols_dict)
+    word, word_dict = (
+        generate_word(symbols_dict) if choice else generate_greek(symbols_dict)
+    )
+    return f"{decimal}{word}", {**decimal_dict, **word_dict}
 
 
 def generate_greek(list_of_letters: list, symbols_dict) -> str:
     length = random.randint(1, 5)
-    return "".join(random.choices(list_of_letters, k=length))
+    greek = "".join(random.choices(list_of_letters, k=length))
+    classes = set(greek)
+    return greek, {key.strip(): symbols_dict[key.strip()] for key in classes}
 
 
 # def generate_dataset_only_templates():
@@ -396,16 +402,54 @@ def generate_dataset(
             symbols_dict = utils.load_symbols_from_templates(
                 os.getenv("templates"), all=False, files=["number.txt", "delimiter.txt"]
             )
+            train_args = [
+                (
+                    i,
+                    *generate_decimal(symbols_dict),
+                    images_train_dir,
+                    labels_train_dir,
+                    verbose,
+                )
+                for i in range(train_number)
+            ]
 
-            classes = [key for key in symbols_dict.keys()]
-            lengths = np.random.randint(1, 10, count).tolist()
+            val_args = [
+                (
+                    i,
+                    *generate_decimal(symbols_dict),
+                    images_val_dir,
+                    labels_val_dir,
+                    verbose,
+                )
+                for i in range(train_number, train_number + val_number)
+            ]
         case "variable":
             symbols_dict = utils.load_symbols_from_templates(
-                os.getenv("templates"), all=False, files=["number.txt", "delimiter.txt", "letter.txt", "greek-letter.txt"]
+                os.getenv("templates"),
+                all=False,
+                files=["number.txt", "delimiter.txt", "letter.txt", "greek-letter.txt"],
             )
+            train_args = [
+                (
+                    i,
+                    *generate_variable(symbols_dict),
+                    images_train_dir,
+                    labels_train_dir,
+                    verbose,
+                )
+                for i in range(train_number)
+            ]
 
-            classes = [key for key in symbols_dict.keys()]
-            lengths = np.random.randint(1, 10, count).tolist()
+            val_args = [
+                (
+                    i,
+                    *generate_variable(symbols_dict),
+                    images_val_dir,
+                    labels_val_dir,
+                    verbose,
+                )
+                for i in range(train_number, train_number + val_number)
+            ]
         case "all":
             # Load classes from templates
             symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
@@ -457,8 +501,8 @@ def generate_dataset(
 
 
 if __name__ == "__main__":
-    # generate_pattern()
-    # print("dataset done")
-    generate_dataset(count=10000)
+    generate_pattern()
+    print("patterns done")
+    generate_dataset(count=1000, level="number")
     # generate_dataset_only_templates()
     # print(load_symbols_from_templates(os.getenv("templates")))
