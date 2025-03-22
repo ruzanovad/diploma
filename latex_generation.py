@@ -14,12 +14,26 @@ import numpy as np
 
 load_dotenv()
 
-latex = r"""\documentclass{standalone}
+latex = r"""\documentclass{standalone}[border={10pt 10pt 10pt 10pt}]
 \usepackage{amsmath}
 \begin{document}
 %s
 \end{document}
 """
+
+
+def load_greek_letters(file_path):
+    try:
+        with open(file_path, "r") as file:
+            list_of_letters = [line.strip() for line in file if line.strip()]
+        # print(list_of_letters)
+        return list_of_letters
+    except FileNotFoundError:
+        print(f"Error: File not found at {file_path}")
+        return []
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+        return []
 
 
 def delete_files_with_extension(directory, extension):
@@ -113,7 +127,7 @@ def generate_pattern(label, level="number"):
                 file.write(f"{class_number} {width/2} {height/2} {width} {height}\n")
 
             # Clean up
-            for ext in ["aux", "log", "dvi", "tex"]:
+            for ext in ["aux", "log", "dvi"]:
                 delete_files_with_extension(current_dir, ext)
 
 
@@ -161,7 +175,7 @@ def generate_one(current_prefix: str, template):
         print(f"Error converting {dvi_file} to PNG: {dvi_result.stderr.decode()}")
         return
 
-    for ext in ["aux", "log", "dvi", "tex"]:
+    for ext in ["aux", "log", "dvi"]:
         delete_files_with_extension("", ext)
 
 
@@ -306,7 +320,7 @@ def generate_decimal(symbols_dict) -> str:
 
 
 def generate_word(symbols_dict) -> str:
-    length = random.randint(1, 5)
+    length = random.randint(12, 17)
     text = "".join(
         random.choices("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", k=length)
     )
@@ -314,18 +328,34 @@ def generate_word(symbols_dict) -> str:
 
 
 def generate_variable(symbols_dict) -> str:
-    choice = random.randint(0, 1)
-    decimal, decimal_dict = generate_decimal(symbols_dict)
-    word, word_dict = (
-        generate_word(symbols_dict) if choice else generate_greek(symbols_dict)
-    )
-    return f"{decimal}{word}", {**decimal_dict, **word_dict}
+    # 10 symbols, 1% of each class in average
+    # for dataset of length equal to 3000 we have 300 symbols of each class
+
+    l = random.choices(symbols_dict.keys(), k = 15)
+    classes = set(l)
+    # choice = random.randint(0, 1)
+
+    # integer_part = str(random.randint(0, 9))
+    # decimal_part = str(random.randint(0, 9))
+    # delim = random.choice([".", ","])
+    # classes = set(integer_part) | set(decimal_part) | set(delim)
+
+    # decimal, decimal_dict = f"{integer_part}{delim}{decimal_part}", {
+    #     key.strip(): symbols_dict[key.strip()] for key in classes
+    # }
+
+    # word, word_dict = (
+    #     generate_word(symbols_dict) if choice else generate_greek(symbols_dict)
+    # )
+    return "".join(l), {key.strip(): symbols_dict[key.strip()] for key in classes}
 
 
-def generate_greek(list_of_letters: list, symbols_dict) -> str:
-    length = random.randint(1, 5)
-    greek = "".join(random.choices(list_of_letters, k=length))
-    classes = set(greek)
+def generate_greek(symbols_dict) -> str:
+    global list_of_letters
+    length = random.randint(9, 12)
+    ch = random.choices(list_of_letters, k=length)
+    greek = "".join(ch)
+    classes = set(ch)
     return greek, {key.strip(): symbols_dict[key.strip()] for key in classes}
 
 
@@ -518,7 +548,7 @@ def generate_dataset(
         executor.map(fill_file_job, val_args)
 
     # Finally clean up aux files
-    for ext in ["aux", "log", "dvi", "tex"]:
+    for ext in ["aux", "log", "dvi"]:
         delete_files_with_extension(images_train_dir, ext)
         delete_files_with_extension(images_val_dir, ext)
     # Generate dataset.yaml
@@ -555,8 +585,14 @@ def generate_dataset(
 
 
 if __name__ == "__main__":
-    generate_pattern(level="number", label="number")
+    # label = "number_margin_2000"
+    # generate_pattern(level="number", label=label)
+    # print("patterns done")
+    # generate_dataset(count=2000, level="number", label=label)
+
+    greek_letters_file = os.path.join("templates", "greek-letter.txt")
+    list_of_letters = load_greek_letters(greek_letters_file)
+    label = "variable_margin_3000"
+    generate_pattern(level="variable", label=label)
     print("patterns done")
-    generate_dataset(count=1000, level="number", label="number")
-    # generate_dataset_only_templates()
-    # print(load_symbols_from_templates(os.getenv("templates")))
+    generate_dataset(count=3000, level="variable", label=label)

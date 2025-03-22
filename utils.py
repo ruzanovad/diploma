@@ -132,7 +132,7 @@ def stupid_encoder(
 
         return idx
 
-    sorted_indices = lexsort((bounding_boxes[:, 1], bounding_boxes[:, 2]))
+    sorted_indices = lexsort(torch.stack((bounding_boxes[:, 1], bounding_boxes[:, 2])))
     sorted_boxes = bounding_boxes[sorted_indices]
     # Получаем class_id как long-тензор (для индексирования в словаре)
     class_ids = sorted_boxes[:, 0].long()

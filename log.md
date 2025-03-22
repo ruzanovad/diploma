@@ -94,3 +94,21 @@ ignoring corrupt image/label: image size (5, 5) <10 pixels
 
 длинные изображения  в длину - 1300 пикселей, для обучения YOLO требует квадратные изображения поэтому проблематично 
 использовать большой размер  
+
+If custom floats are defined using a package like float are not supported
+yet. Dependent on the way they define floats they might still work. For these
+float=true should be set as class options so that the normal definition of floats
+is preserved. Afterwards \standaloneconfig{float=false} can be used to
+disable floats while taking the changed float definition into account.
+convert={〈conversion options〉}
+png={〈conversion options〉}
+jpg={〈conversion options〉}
+gif={〈conversion options〉}
+svg={〈conversion options〉}
+emf={〈conversion options〉}
+These options allow to enable and configure the conversion feature. See section 6
+for the full description.
+
+если для 12 классов хватает 2000 изображений
+то если добавляем буквы латинские (26*2=42)
+если добавляем греческие буквы => получается порядка 100 классов
