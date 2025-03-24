@@ -62,6 +62,9 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", action="store_true")
 
     args = parser.parse_args()
+    
+    if args.resume:
+        assert args.train and args["ckpt-path"] != None, "Resume==True could be use only when training with checkpoint enabled"
 
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
@@ -127,22 +130,25 @@ if __name__ == "__main__":
         log_text=args.log_text,
     )
     tb_logger = pl.loggers.tensorboard.TensorBoardLogger(
-        "tb_logs", name="image2latex_model"
+        "tb_logs", name="image2latex_model", log_graph=True
     )
 
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
     accumulate_grad_batches = args.accumulate_batch // args.batch_size
+    assert accumulate_grad_batches > 0
+    
     trainer = pl.Trainer(
         logger=tb_logger,
         callbacks=[lr_monitor],
         max_epochs=args.max_epochs,
         accelerator="auto",
-        # strategy="dp", is deprecated in new version
+        strategy="ddp", 
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
         devices=-1 if args.gpu else 1,
+        num_sanity_val_steps=1
     )
 
     ckpt_path = args.ckpt_path

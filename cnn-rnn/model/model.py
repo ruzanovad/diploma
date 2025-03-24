@@ -185,40 +185,27 @@ class Image2LatexModel(pl.LightningModule):
         ]
         truths = [self.text.tokenize(self.text.int2text(i)) for i in formulas]
 
-        edit_dist = torch.mean(
-            torch.Tensor(
-                [
-                    edit_distance(tru, pre) / len(tru)
-                    for pre, tru in zip(predicts, truths)
-                ]
-            )
-        )
+        edit_dists = [
+            edit_distance(tru, pre) / len(tru) if len(tru) > 0 else 0.0
+            for pre, tru in zip(predicts, truths)
+        ]
+        edit_dist = torch.tensor(edit_dists).mean()
 
-        bleu4 = torch.mean(
-            torch.Tensor(
-                [
-                    torch.tensor(
-                        self.bleu.compute(
-                            predictions=[" ".join(pre)], references=[" ".join(tru)]
-                        )["bleu"]
-                    )
-                    for pre, tru in zip(predicts, truths)
-                ]
-            )
-        )
+        bleu_scores = [
+            self.bleu.compute(predictions=[" ".join(pre)], references=[" ".join(tru)])[
+                "bleu"
+            ]
+            for pre, tru in zip(predicts, truths)
+        ]
+        bleu4 = torch.tensor(bleu_scores).mean()
 
-        em = torch.mean(
-            torch.Tensor(
-                [
-                    torch.tensor(
-                        self.exact_match.compute(
-                            predictions=[" ".join(pre)], references=[" ".join(tru)]
-                        )["exact_match"]
-                    )
-                    for pre, tru in zip(predicts, truths)
-                ]
-            )
-        )
+        em_scores = [
+            self.exact_match.compute(
+                predictions=[" ".join(pre)], references=[" ".join(tru)]
+            )["exact_match"]
+            for pre, tru in zip(predicts, truths)
+        ]
+        em = torch.tensor(em_scores).mean()
 
         if True and batch_idx % self.log_step == 0:
             for truth, pred in zip(truths, predicts):
