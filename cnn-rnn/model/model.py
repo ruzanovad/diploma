@@ -133,7 +133,7 @@ class Image2LatexModel(pl.LightningModule):
         )
 
         def safe_bleu(pre, tru):
-            if not pre or not tru:  # Если какая-то строка пустая
+            if not len(pre) or not len(tru):  # Если какая-то строка пустая
                 return 0.0
             return self.bleu.compute(
                 predictions=[" ".join(pre)], references=[" ".join(tru)]
@@ -202,7 +202,7 @@ class Image2LatexModel(pl.LightningModule):
         edit_dist = torch.tensor(edit_dists).mean()
 
         def safe_bleu(pre, tru):
-            if not pre or not tru:  # Если какая-то строка пустая
+            if not len(pre) or not len(tru):  # Если какая-то строка пустая
                 return 0.0
             return self.bleu.compute(
                 predictions=[" ".join(pre)], references=[" ".join(tru)]
