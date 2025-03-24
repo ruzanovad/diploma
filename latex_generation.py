@@ -330,8 +330,8 @@ def generate_word(symbols_dict) -> str:
 def generate_variable(symbols_dict) -> str:
     # 10 symbols, 1% of each class in average
     # for dataset of length equal to 3000 we have 300 symbols of each class
-
-    l = random.choices(symbols_dict.keys(), k = 15)
+    # print(symbols_dict)
+    l = random.choices([key for key in symbols_dict.keys()], k = 15)
     classes = set(l)
     # choice = random.randint(0, 1)
 
@@ -347,7 +347,7 @@ def generate_variable(symbols_dict) -> str:
     # word, word_dict = (
     #     generate_word(symbols_dict) if choice else generate_greek(symbols_dict)
     # )
-    return "".join(l), {key.strip(): symbols_dict[key.strip()] for key in classes}
+    return " ".join(l), {key.strip(): symbols_dict[key.strip()] for key in classes}
 
 
 def generate_greek(symbols_dict) -> str:
@@ -592,7 +592,7 @@ if __name__ == "__main__":
 
     greek_letters_file = os.path.join("templates", "greek-letter.txt")
     list_of_letters = load_greek_letters(greek_letters_file)
-    label = "variable_margin_3000"
+    label = "variable_margin_3000_uniform"
     generate_pattern(level="variable", label=label)
     print("patterns done")
-    generate_dataset(count=3000, level="variable", label=label)
+    generate_dataset(count=6000, level="variable", label=label)

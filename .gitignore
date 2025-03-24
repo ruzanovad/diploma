@@ -9,3 +9,4 @@ generated_token.json
 token_oauth2client.json
 __pycache__/
 runs/
+cnn-rnn/data/im2latex100k
