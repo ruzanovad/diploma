@@ -63,9 +63,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    if args.resume:
-        assert args.train and args["ckpt-path"] != None, "Resume==True could be use only when training with checkpoint enabled"
-
+    
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
 
