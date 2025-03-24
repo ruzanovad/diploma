@@ -60,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--grad-clip", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--gpu", action="store_true")
+    parser.add_argument("--notebook", action="store_true")
 
     args = parser.parse_args()
     
@@ -141,7 +142,7 @@ if __name__ == "__main__":
         callbacks=[lr_monitor],
         max_epochs=args.max_epochs,
         accelerator="auto",
-        strategy="ddp", 
+        strategy="ddp_notebook" if args.notebook else "ddp", 
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
