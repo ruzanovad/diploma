@@ -59,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-name", type=str, default="conv_lstm")
     parser.add_argument("--grad-clip", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--gpu", action="store_true")
 
     args = parser.parse_args()
 
@@ -125,7 +126,9 @@ if __name__ == "__main__":
         log_step=args.log_step,
         log_text=args.log_text,
     )
-    tb_logger = pl.loggers.tensorboard.TensorBoardLogger('tb_logs', name='image2latex_model')
+    tb_logger = pl.loggers.tensorboard.TensorBoardLogger(
+        "tb_logs", name="image2latex_model"
+    )
 
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
@@ -135,11 +138,11 @@ if __name__ == "__main__":
         callbacks=[lr_monitor],
         max_epochs=args.max_epochs,
         accelerator="auto",
-        strategy="dp",
+        # strategy="dp", is deprecated in new version
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
-        devices=-1,
+        devices=-1 if args.gpu else 1,
     )
 
     ckpt_path = args.ckpt_path

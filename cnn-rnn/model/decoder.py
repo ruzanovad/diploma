@@ -1,6 +1,6 @@
 import torch
 from torch import nn, Tensor
-# from .attention import Attention
+from .attention import Attention
 
 
 class Decoder(nn.Module):
@@ -21,7 +21,7 @@ class Decoder(nn.Module):
         self.sos_id = sos_id
         self.eos_id = eos_id
         self.embedding = nn.Embedding(n_class, emb_dim)
-        # self.attention = Attention(enc_dim, dec_dim, attn_dim)
+        self.attention = Attention(enc_dim, dec_dim, attn_dim)
         self.concat = nn.Linear(emb_dim + enc_dim, dec_dim)
         self.rnn = nn.LSTM(
             dec_dim,
@@ -54,10 +54,10 @@ class Decoder(nn.Module):
         """
         h, c = hidden_state
         embed = self.embedding(y)
-        # attn_context = self.attention(h, encoder_out)
+        attn_context = self.attention(h, encoder_out)
 
-        rnn_input = embed[:, -1]
-        # rnn_input = torch.cat([embed[:, -1], attn_context], dim=1)
+        # rnn_input = embed[:, -1]
+        rnn_input = torch.cat([embed[:, -1], attn_context], dim=1)
         rnn_input = self.concat(rnn_input)
 
         rnn_input = rnn_input.unsqueeze(1)

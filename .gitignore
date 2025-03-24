@@ -10,3 +10,4 @@ token_oauth2client.json
 __pycache__/
 runs/
 cnn-rnn/data/im2latex100k
+cnn-rnn/tb_logs
