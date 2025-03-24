@@ -11,3 +11,4 @@ __pycache__/
 runs/
 cnn-rnn/data/im2latex100k
 cnn-rnn/tb_logs
+cnn-rnn/checkpoints

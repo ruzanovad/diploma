@@ -3,7 +3,6 @@
 
 import pandas as pd
 import torch
-from torch.utils.checkpoint import checkpoint
 from torch import nn, Tensor
 from model.model import Image2LatexModel
 from data.dataset import LatexDataset, LatexPredictDataset
@@ -132,6 +131,14 @@ if __name__ == "__main__":
         "tb_logs", name="image2latex_model", log_graph=True
     )
 
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        dirpath="checkpoints/",
+        filename="model-{epoch:02d}-{val_loss:.2f}",
+        monitor="val_loss",
+        mode="min",
+        save_top_k=2,
+        auto_insert_metric_name=False
+    )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
     accumulate_grad_batches = args.accumulate_batch // args.batch_size
@@ -139,10 +146,10 @@ if __name__ == "__main__":
     
     trainer = pl.Trainer(
         logger=tb_logger,
-        callbacks=[lr_monitor],
+        callbacks=[lr_monitor, checkpoint_callback],
         max_epochs=args.max_epochs,
-        accelerator="auto",
-        strategy="ddp_notebook" if args.notebook else "ddp", 
+        accelerator="gpu" if args.gpu else "auto",
+        strategy="auto" if not args.gpu else "ddp_notebook" if args.notebook else "ddp", 
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,

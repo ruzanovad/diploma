@@ -47,6 +47,11 @@ class Image2LatexModel(pl.LightningModule):
             sos_id,
             eos_id,
         )
+        self.example_input_array = (
+            torch.randn([1, 3, 64, 384]),  # image
+            torch.randint(0, n_class, [1, 20]),  # formula
+            torch.tensor([20]),  # length
+        )
         self.criterion = nn.CrossEntropyLoss()
         self.lr = lr
         self.total_steps = total_steps
@@ -64,7 +69,6 @@ class Image2LatexModel(pl.LightningModule):
             optimizer,
             max_lr=self.lr,
             total_steps=self.total_steps,
-            verbose=False,
         )
         scheduler = {
             "scheduler": scheduler,
@@ -74,6 +78,9 @@ class Image2LatexModel(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def forward(self, images, formulas, formula_len):
+        # print(images.shape)
+        # print(formulas.shape)
+        # print(formula_len)
         return self.model(images, formulas, formula_len)
 
     def training_step(self, batch, batch_idx):
@@ -125,14 +132,17 @@ class Image2LatexModel(pl.LightningModule):
             )
         )
 
+        def safe_bleu(pre, tru):
+            if not pre or not tru:  # Если какая-то строка пустая
+                return 0.0
+            return self.bleu.compute(
+                predictions=[" ".join(pre)], references=[" ".join(tru)]
+            )["bleu"]
+
         bleu4 = torch.mean(
             torch.Tensor(
                 [
-                    torch.tensor(
-                        self.bleu.compute(
-                            predictions=[" ".join(pre)], references=[" ".join(tru)]
-                        )["bleu"]
-                    )
+                    torch.tensor(safe_bleu(pre, tru))
                     for pre, tru in zip(predicts, truths)
                 ]
             )
@@ -191,12 +201,14 @@ class Image2LatexModel(pl.LightningModule):
         ]
         edit_dist = torch.tensor(edit_dists).mean()
 
-        bleu_scores = [
-            self.bleu.compute(predictions=[" ".join(pre)], references=[" ".join(tru)])[
-                "bleu"
-            ]
-            for pre, tru in zip(predicts, truths)
-        ]
+        def safe_bleu(pre, tru):
+            if not pre or not tru:  # Если какая-то строка пустая
+                return 0.0
+            return self.bleu.compute(
+                predictions=[" ".join(pre)], references=[" ".join(tru)]
+            )["bleu"]
+
+        bleu_scores = [safe_bleu(pre, tru) for pre, tru in zip(predicts, truths)]
         bleu4 = torch.tensor(bleu_scores).mean()
 
         em_scores = [
