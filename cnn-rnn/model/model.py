@@ -5,8 +5,8 @@ from .text import Text
 from .utils import exact_match
 import pytorch_lightning as pl
 from torchaudio.functional import edit_distance
-from torchtext.data.metrics import bleu_score
-# from evaluate import load
+from evaluate import load
+
 
 class Image2LatexModel(pl.LightningModule):
     def __init__(
@@ -54,13 +54,17 @@ class Image2LatexModel(pl.LightningModule):
         self.max_length = 150
         self.log_step = log_step
         self.log_text = log_text
-        # self.exact_match = load("exact_match")
+        self.exact_match = load("exact_match")
+        self.bleu = load("bleu")
         self.save_hyperparameters()
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, betas=(0.9, 0.98))
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
-            optimizer, max_lr=self.lr, total_steps=self.total_steps, verbose=False,
+            optimizer,
+            max_lr=self.lr,
+            total_steps=self.total_steps,
+            verbose=False,
         )
         scheduler = {
             "scheduler": scheduler,
@@ -123,7 +127,14 @@ class Image2LatexModel(pl.LightningModule):
 
         bleu4 = torch.mean(
             torch.Tensor(
-                [bleu_score([pre], [[tru]]) for pre, tru in zip(predicts, truths)]
+                [
+                    torch.tensor(
+                        self.bleu.compute(
+                            predictions=[" ".join(pre)], references=[" ".join(tru)]
+                        )["bleu"]
+                    )
+                    for pre, tru in zip(predicts, truths)
+                ]
             )
         )
 
@@ -131,9 +142,9 @@ class Image2LatexModel(pl.LightningModule):
             torch.Tensor(
                 [
                     torch.tensor(
-                        exact_match(
-                            [" ".join(pre)],[" ".join(tru)]
-                        )
+                        self.exact_match.compute(
+                            predictions=[" ".join(pre)], references=[" ".join(tru)]
+                        )["exact_match"]
                     )
                     for pre, tru in zip(predicts, truths)
                 ]
@@ -185,7 +196,14 @@ class Image2LatexModel(pl.LightningModule):
 
         bleu4 = torch.mean(
             torch.Tensor(
-                [bleu_score([pre], [[tru]]) for pre, tru in zip(predicts, truths)]
+                [
+                    torch.tensor(
+                        self.bleu.compute(
+                            predictions=[" ".join(pre)], references=[" ".join(tru)]
+                        )["bleu"]
+                    )
+                    for pre, tru in zip(predicts, truths)
+                ]
             )
         )
 
@@ -193,9 +211,9 @@ class Image2LatexModel(pl.LightningModule):
             torch.Tensor(
                 [
                     torch.tensor(
-                        exact_match(
-                            [" ".join(pre)],[" ".join(tru)]
-                        )
+                        self.exact_match.compute(
+                            predictions=[" ".join(pre)], references=[" ".join(tru)]
+                        )["exact_match"]
                     )
                     for pre, tru in zip(predicts, truths)
                 ]

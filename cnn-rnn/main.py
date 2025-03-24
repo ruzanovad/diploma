@@ -22,9 +22,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--predict-img-path", type=str, help="image for predict path", default=None
     )
+
     parser.add_argument(
         "--dataset", type=str, help="choose dataset [100k, 170k]", default="100k"
     )
+    parser.add_argument("--vocab_file", type=str, help="path to vocab file")
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--val", action="store_true")
     parser.add_argument("--test", action="store_true")
@@ -65,9 +67,9 @@ if __name__ == "__main__":
 
     text = None
     if args.dataset == "100k":
-        text = Text100k()
+        text = Text100k(args.vocab_file)
     elif args.dataset == "170k":
-        text = Text170k()
+        text = Text170k(args.vocab_file)
 
     train_set = LatexDataset(
         data_path=args.data_path,
@@ -95,13 +97,13 @@ if __name__ == "__main__":
     steps_per_epoch = round(len(train_set) / args.batch_size)
     total_steps = steps_per_epoch * args.max_epochs
     dm = DataModule(
-        train_set,
-        val_set,
-        test_set,
-        predict_set,
-        args.num_workers,
-        args.batch_size,
-        text,
+        train_set=train_set,
+        val_set=val_set,
+        test_set=test_set,
+        predict_set=predict_set,
+        num_workers=args.num_workers,
+        batch_size=args.batch_size,
+        text=text,
     )
 
     model = Image2LatexModel(
@@ -123,15 +125,13 @@ if __name__ == "__main__":
         log_step=args.log_step,
         log_text=args.log_text,
     )
+    tb_logger = pl.loggers.tensorboard.TensorBoardLogger('tb_logs', name='image2latex_model')
 
-    wandb_logger = pl.loggers.WandbLogger(
-        project="image2latex", name=args.model_name, log_model="all"
-    )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
     accumulate_grad_batches = args.accumulate_batch // args.batch_size
     trainer = pl.Trainer(
-        logger=wandb_logger,
+        logger=tb_logger,
         callbacks=[lr_monitor],
         max_epochs=args.max_epochs,
         accelerator="auto",

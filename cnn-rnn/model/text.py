@@ -23,9 +23,10 @@ class Text(ABC):
 
 
 class Text100k(Text):
-    def __init__(self):
+    def __init__(self, vocab_file):
         super().__init__()
-        self.id2word = json.load(open("data/vocab/100k_vocab.json", "r"))
+        # self.id2word = json.load(open("data/vocab/100k_vocab.json", "r"))
+        self.id2word = json.load(open(vocab_file, "r"))
         self.word2id = dict(zip(self.id2word, range(len(self.id2word))))
         self.TOKENIZE_PATTERN = re.compile(
             "(\\\\[a-zA-Z]+)|" + '((\\\\)*[$-/:-?{-~!"^_`\[\]])|' + "(\w)|" + "(\\\\)"
@@ -40,9 +41,10 @@ class Text100k(Text):
 
 
 class Text170k(Text):
-    def __init__(self):
+    def __init__(self, vocab_file):
         super().__init__()
-        self.id2word = json.load(open("data/vocab/170k_vocab.json", "r"))
+        # self.id2word = json.load(open("data/vocab/100k_vocab.json", "r"))
+        self.id2word = json.load(open(vocab_file, "r"))
         self.word2id = dict(zip(self.id2word, range(len(self.id2word))))
         self.n_class = len(self.id2word)
 
