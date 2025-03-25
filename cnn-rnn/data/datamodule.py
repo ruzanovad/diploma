@@ -12,7 +12,7 @@ class DataModule(pl.LightningDataModule):
         val_set,
         test_set,
         predict_set,
-        num_workers: int = 1,
+        num_workers: int = 4,
         batch_size=20,
         text=None,
     ):

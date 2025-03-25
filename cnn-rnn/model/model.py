@@ -103,6 +103,7 @@ class Image2LatexModel(pl.LightningModule):
 
         return loss
 
+    @torch.no_grad
     def validation_step(self, batch, batch_idx):
         images, formulas, formula_len = batch
 
@@ -175,6 +176,7 @@ class Image2LatexModel(pl.LightningModule):
 
         return edit_dist, bleu4, em, loss
 
+    @torch.no_grad
     def test_step(self, batch, batch_idx):
         images, formulas, formula_len = batch
 
