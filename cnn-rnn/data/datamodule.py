@@ -59,6 +59,11 @@ class DataModule(pl.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(self.predict_set, shuffle=False, batch_size=self.batch_size,)
 
+    """Collate function
+    collate_fn receives a list of tuples if __getitem__ 
+    function from a Dataset subclass returns a tuple, or just a normal 
+    list if Dataset subclass returns only one element. Its main objective 
+    is to create your batch without spending much time implementing it manually"""
     def collate_fn(self, batch):
         size = len(batch)
         formulas = [self.text.text2int(i[1]) for i in batch]

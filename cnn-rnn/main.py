@@ -34,7 +34,6 @@ if __name__ == "__main__":
     parser.add_argument("--train-sample", type=int, default=5000)
     parser.add_argument("--val-sample", type=int, default=1000)
     parser.add_argument("--test-sample", type=int, default=1000)
-    parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--max-epochs", type=int, default=15)
     parser.add_argument("--log-step", type=int, default=100)
     parser.add_argument("--lr", type=float, default=0.01)
@@ -56,14 +55,21 @@ if __name__ == "__main__":
     parser.add_argument("--beam-width", type=int, default=5)
     parser.add_argument("--num-layers", type=int, default=1)
     parser.add_argument("--model-name", type=str, default="conv_lstm")
+    """
+    Gradient clipping is a method where the error derivative is changed or clipped 
+    to a threshold during backward propagation through the network, and the clipped 
+    gradients are used to update the weights. 
+    By rescaling the error derivative, the updates to the weights will also be rescaled, 
+    dramatically decreasing the likelihood of an overflow or underflow.
+    """
     parser.add_argument("--grad-clip", type=int, default=0)
+
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--notebook", action="store_true")
 
     args = parser.parse_args()
-    
-    
+
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
 
@@ -137,29 +143,29 @@ if __name__ == "__main__":
         monitor="val_loss",
         mode="min",
         save_top_k=2,
-        auto_insert_metric_name=False
+        auto_insert_metric_name=False,
     )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
     accumulate_grad_batches = args.accumulate_batch // args.batch_size
     assert accumulate_grad_batches > 0
-    
+
     trainer = pl.Trainer(
         logger=tb_logger,
         callbacks=[lr_monitor, checkpoint_callback],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
-        strategy="auto" if not args.gpu else "ddp_notebook" if args.notebook else "ddp", 
+        strategy="auto" if not args.gpu else "ddp_notebook" if args.notebook else "ddp",
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
         devices=-1 if args.gpu else 1,
-        num_sanity_val_steps=1
+        num_sanity_val_steps=1,
     )
 
     ckpt_path = args.ckpt_path
     if ckpt_path:
-        model = model.load_from_checkpoint(ckpt_path)
+        model = Image2LatexModel.load_from_checkpoint(ckpt_path)
 
     if args.train:
         print("=" * 10 + "[Train]" + "=" * 10)
