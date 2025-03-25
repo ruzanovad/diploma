@@ -165,7 +165,8 @@ if __name__ == "__main__":
 
     ckpt_path = args.ckpt_path
     if ckpt_path:
-        model = Image2LatexModel.load_from_checkpoint(ckpt_path)
+        """"GPU operations such as moving tensors to the GPU or calling torch.cuda functions before invoking Trainer.fit is not allowed.""""
+        model = Image2LatexModel.load_from_checkpoint(ckpt_path, map_location="cpu")
 
     if args.train:
         print("=" * 10 + "[Train]" + "=" * 10)
