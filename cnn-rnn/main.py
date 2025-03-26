@@ -11,6 +11,29 @@ from model.text import Text100k, Text170k
 import pytorch_lightning as pl
 import argparse
 import numpy as np
+from pytorch_lightning.loggers import Logger
+import sys
+
+class StdoutLogger(Logger):
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def name(self):
+        return "stdout_logger"
+
+    @property
+    def version(self):
+        return "1.0"
+
+    def log_hyperparams(self, params):
+        print(f"[HYPERPARAMS] {params}", file=sys.stdout)
+
+    def log_metrics(self, metrics, step):
+        print(f"[METRICS] Step {step}: {metrics}", file=sys.stdout)
+
+    def finalize(self, status):
+        print(f"[FINALIZE] {status}", file=sys.stdout)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="training image2latex")
@@ -150,8 +173,10 @@ if __name__ == "__main__":
     accumulate_grad_batches = args.accumulate_batch // args.batch_size
     assert accumulate_grad_batches > 0
 
+    logger = StdoutLogger()
+
     trainer = pl.Trainer(
-        logger=tb_logger,
+        logger=[tb_logger, logger],
         callbacks=[lr_monitor, checkpoint_callback],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
@@ -162,11 +187,14 @@ if __name__ == "__main__":
         devices=-1 if args.gpu else 1,
         num_sanity_val_steps=1,
     )
+    
 
     ckpt_path = args.ckpt_path
     if ckpt_path:
         # GPU operations such as moving tensors to the GPU or calling torch.cuda functions before invoking Trainer.fit is not allowed.
         model = Image2LatexModel.load_from_checkpoint(ckpt_path, map_location="cpu")
+
+    
 
     if args.train:
         print("=" * 10 + "[Train]" + "=" * 10)
