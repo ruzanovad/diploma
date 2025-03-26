@@ -79,7 +79,8 @@ class Image2Latex(nn.Module):
         hidden_state = self.init_decoder_hidden_state(encoder_out)
 
         predictions = []
-        for t in range(y_len.max().item()):
+        y_lenmax = int(y_len.max())
+        for t in range(y_lenmax):
             dec_input = y[:, t].unsqueeze(1)
             out, hidden_state = self.decoder(dec_input, encoder_out, hidden_state)
             predictions.append(out.squeeze(1))
@@ -109,7 +110,7 @@ class Image2Latex(nn.Module):
         for t in range(max_length):
             out, hidden_state = self.decoder(y, encoder_out, hidden_state)
 
-            k = out.argmax().item()
+            k = int(out.argmax())
 
             predictions.append(k)
 
