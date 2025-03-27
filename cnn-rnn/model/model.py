@@ -163,10 +163,10 @@ class Image2LatexModel(pl.LightningModule):
         )
 
         if self.log_text and (batch_idx % self.log_step == 0):
-            for truth, pred in zip(truths, predicts):
-                print("=" * 20)
-                print(f"Truth: [{' '.join(truth)}] | Predict: [{' '.join(pred)}]")
-                print("=" * 20)
+            truth, pred = truths[0], predicts[0]
+            print("=" * 20)
+            print(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
+            print("=" * 20)
             print()
 
         self.log("val_loss", loss, sync_dist=True)
@@ -221,11 +221,11 @@ class Image2LatexModel(pl.LightningModule):
         ]
         em = torch.tensor(em_scores).mean()
 
-        if True and batch_idx % self.log_step == 0:
-            for truth, pred in zip(truths, predicts):
-                print("=" * 20)
-                print(f"Truth: [{' '.join(truth)}] | Predict: [{' '.join(pred)}]")
-                print("=" * 20)
+        if self.log_text and batch_idx % self.log_step == 0:
+            truth, pred = truths[0], predicts[0]
+            print("=" * 20)
+            print(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
+            print("=" * 20)
             print()
 
         self.log("test_loss", loss, sync_dist=True)
