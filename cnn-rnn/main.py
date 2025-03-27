@@ -16,7 +16,8 @@ import sys
 from datetime import datetime
 import os
 import math
-
+from pytorch_lightning.utilities import rank_zero_only
+from pytorch_lightning.profilers import AdvancedProfiler
 
 class FileLogger(Logger):
     def __init__(self, train: bool, val: bool, test: bool, predict: bool):
@@ -45,14 +46,17 @@ class FileLogger(Logger):
     def version(self):
         return "1.0"
 
+    @rank_zero_only
     def log_hyperparams(self, params):
         with open(self.log_path, "a") as f:
             print(f"[HYPERPARAMS] {params}", file=f)
 
+    @rank_zero_only
     def log_metrics(self, metrics, step):
         with open(self.log_path, "a") as f:
             print(f"[METRICS] Step {step}: {metrics}", file=f)
 
+    @rank_zero_only
     def finalize(self, status):
         with open(self.log_path, "a") as f:
             print(f"[FINALIZE] {status}", file=f)
@@ -184,8 +188,15 @@ if __name__ == "__main__":
 
     logger = FileLogger(args.train, args.val, args.test, args.predict)
 
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    profiler = AdvancedProfiler(
+        dirpath="logs/profiler",  # where to save
+        filename=f"{timestamp}-profile.txt",  # filename
+    )
+
     trainer = pl.Trainer(
         logger=[tb_logger, logger],
+        profiler=profiler,
         callbacks=[lr_monitor, checkpoint_callback],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",

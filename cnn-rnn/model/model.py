@@ -6,6 +6,7 @@ from .utils import exact_match
 import pytorch_lightning as pl
 from torchaudio.functional import edit_distance
 from evaluate import load
+from pytorch_lightning.utilities.rank_zero import rank_zero_info
 
 
 class Image2LatexModel(pl.LightningModule):
@@ -78,9 +79,6 @@ class Image2LatexModel(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def forward(self, images, formulas, formula_len):
-        # print(images.shape)
-        # print(formulas.shape)
-        # print(formula_len)
         return self.model(images, formulas, formula_len)
 
     def training_step(self, batch, batch_idx):
@@ -164,10 +162,9 @@ class Image2LatexModel(pl.LightningModule):
 
         if self.log_text and (batch_idx % self.log_step == 0):
             truth, pred = truths[0], predicts[0]
-            print("=" * 20)
-            print(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
-            print("=" * 20)
-            print()
+            rank_zero_info("=" * 20)
+            rank_zero_info(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
+            rank_zero_info("=" * 20)
 
         self.log("val_loss", loss, sync_dist=True)
         self.log("val_edit_distance", edit_dist, sync_dist=True)
@@ -223,10 +220,9 @@ class Image2LatexModel(pl.LightningModule):
 
         if self.log_text and batch_idx % self.log_step == 0:
             truth, pred = truths[0], predicts[0]
-            print("=" * 20)
-            print(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
-            print("=" * 20)
-            print()
+            rank_zero_info("=" * 20)
+            rank_zero_info(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
+            rank_zero_info("=" * 20)
 
         self.log("test_loss", loss, sync_dist=True)
         self.log("test_edit_distance", edit_dist, sync_dist=True)
@@ -235,11 +231,12 @@ class Image2LatexModel(pl.LightningModule):
 
         return edit_dist, bleu4, em, loss
 
+    
     def predict_step(self, batch, batch_idx):
         image = batch
 
         latex = self.model.decode(image, self.max_length)
 
-        print("Predicted:", latex)
+        rank_zero_info(f"Predicted: {latex}")
 
         return latex

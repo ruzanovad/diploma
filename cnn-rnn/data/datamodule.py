@@ -25,12 +25,14 @@ class DataModule(pl.LightningDataModule):
         self.text = text
         self.num_workers = num_workers
 
+
     def train_dataloader(self):
         return DataLoader(
             self.train_set,
             shuffle=True,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
+            pin_memory=True,
             drop_last=True,
             num_workers=self.num_workers,
             persistent_workers=True,
@@ -42,6 +44,7 @@ class DataModule(pl.LightningDataModule):
             shuffle=False,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
+            pin_memory=True,
             num_workers=self.num_workers,
             persistent_workers=True,
         )
@@ -52,6 +55,7 @@ class DataModule(pl.LightningDataModule):
             shuffle=False,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
+            pin_memory=True,
             num_workers=self.num_workers,
             persistent_workers=True,
         )
