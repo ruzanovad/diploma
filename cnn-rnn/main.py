@@ -241,7 +241,7 @@ if __name__ == "__main__":
             print(
                 "[INFO] Loading full checkpoint (including hyperparameters, scheduler, etc)."
             )
-            model = Image2LatexModel.load_from_checkpoint(ckpt_path)
+            model = Image2LatexModel.load_from_checkpoint(ckpt_path, map_location="cpu")
     else:
         print("[INFO] Starting model from scratch.")
         model = Image2LatexModel(
