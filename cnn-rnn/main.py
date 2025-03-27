@@ -13,27 +13,50 @@ import argparse
 import numpy as np
 from pytorch_lightning.loggers import Logger
 import sys
+from datetime import datetime
+import os
+import math
 
-class StdoutLogger(Logger):
-    def __init__(self):
+
+class FileLogger(Logger):
+    def __init__(self, train: bool, val: bool, test: bool, predict: bool):
         super().__init__()
+
+        modes = "-".join(
+            [
+                name
+                for flag, name in zip(
+                    [train, val, test, predict], ["train", "val", "test", "predict"]
+                )
+                if flag
+            ]
+        )
+        os.makedirs("logs", exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        self.log_path = f"logs/{modes}-{timestamp}.log"
+        self.log_file = open(self.log_path, "a")
 
     @property
     def name(self):
-        return "stdout_logger"
+        return "file_logger"
 
     @property
     def version(self):
         return "1.0"
 
     def log_hyperparams(self, params):
-        print(f"[HYPERPARAMS] {params}", file=sys.stdout)
+        with open(self.log_path, "a") as f:
+            print(f"[HYPERPARAMS] {params}", file=f)
 
     def log_metrics(self, metrics, step):
-        print(f"[METRICS] Step {step}: {metrics}", file=sys.stdout)
+        with open(self.log_path, "a") as f:
+            print(f"[METRICS] Step {step}: {metrics}", file=f)
 
     def finalize(self, status):
-        print(f"[FINALIZE] {status}", file=sys.stdout)
+        with open(self.log_path, "a") as f:
+            print(f"[FINALIZE] {status}", file=f)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="training image2latex")
@@ -51,6 +74,8 @@ if __name__ == "__main__":
     parser.add_argument("--vocab_file", type=str, help="path to vocab file")
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--val", action="store_true")
+    # do not use ddp with test
+    # https://github.com/Lightning-AI/pytorch-lightning/issues/12862
     parser.add_argument("--test", action="store_true")
     parser.add_argument("--predict", action="store_true")
     parser.add_argument("--log-text", action="store_true")
@@ -73,7 +98,7 @@ if __name__ == "__main__":
         "--decode-type",
         type=str,
         default="greedy",
-        help="Chose between [greedy, beamsearch]",
+        help="Choose between [greedy, beamsearch]",
     )
     parser.add_argument("--beam-width", type=int, default=5)
     parser.add_argument("--num-layers", type=int, default=1)
@@ -90,6 +115,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--notebook", action="store_true")
+    parser.add_argument("--rewrite-checkpoint-fitting", action="store_true")
 
     args = parser.parse_args()
 
@@ -125,8 +151,13 @@ if __name__ == "__main__":
     )
     predict_set = LatexPredictDataset(predict_img_path=args.predict_img_path)
 
-    steps_per_epoch = round(len(train_set) / args.batch_size)
-    total_steps = steps_per_epoch * args.max_epochs
+    steps_per_epoch = math.ceil(len(train_set) / args.batch_size)
+    accumulate_grad_batches = args.accumulate_batch // args.batch_size
+    assert accumulate_grad_batches > 0
+
+    effective_steps_per_epoch = steps_per_epoch // accumulate_grad_batches
+    total_steps = effective_steps_per_epoch * args.max_epochs
+
     dm = DataModule(
         train_set=train_set,
         val_set=val_set,
@@ -137,32 +168,13 @@ if __name__ == "__main__":
         text=text,
     )
 
-    model = Image2LatexModel(
-        lr=args.lr,
-        total_steps=total_steps,
-        n_class=text.n_class,
-        enc_dim=args.enc_dim,
-        enc_type=args.enc_type,
-        emb_dim=args.emb_dim,
-        dec_dim=args.dec_dim,
-        attn_dim=args.attn_dim,
-        num_layers=args.num_layers,
-        dropout=args.dropout,
-        sos_id=text.sos_id,
-        eos_id=text.eos_id,
-        decode_type=args.decode_type,
-        text=text,
-        beam_width=args.beam_width,
-        log_step=args.log_step,
-        log_text=args.log_text,
-    )
     tb_logger = pl.loggers.tensorboard.TensorBoardLogger(
         "tb_logs", name="image2latex_model", log_graph=True
     )
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="model-{epoch:02d}-{val_loss:.2f}",
+        filename="model-{epoch:02d}-{val_loss:.3f}",
         monitor="val_loss",
         mode="min",
         save_top_k=2,
@@ -170,10 +182,7 @@ if __name__ == "__main__":
     )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
-    accumulate_grad_batches = args.accumulate_batch // args.batch_size
-    assert accumulate_grad_batches > 0
-
-    logger = StdoutLogger()
+    logger = FileLogger(args.train, args.val, args.test, args.predict)
 
     trainer = pl.Trainer(
         logger=[tb_logger, logger],
@@ -187,27 +196,83 @@ if __name__ == "__main__":
         devices=-1 if args.gpu else 1,
         num_sanity_val_steps=1,
     )
-    
 
     ckpt_path = args.ckpt_path
+    model = None
+
     if ckpt_path:
-        # GPU operations such as moving tensors to the GPU or calling torch.cuda functions before invoking Trainer.fit is not allowed.
-        model = Image2LatexModel.load_from_checkpoint(ckpt_path, map_location="cpu")
+        if args.rewrite_checkpoint_fitting:
+            print("[INFO] Loading weights only, overriding hyperparameters.")
+            # Создаем модель с НОВЫМИ параметрами
+            model = Image2LatexModel(
+                lr=args.lr,
+                total_steps=total_steps,
+                n_class=text.n_class,
+                enc_dim=args.enc_dim,
+                enc_type=args.enc_type,
+                emb_dim=args.emb_dim,
+                dec_dim=args.dec_dim,
+                attn_dim=args.attn_dim,
+                num_layers=args.num_layers,
+                dropout=args.dropout,
+                sos_id=text.sos_id,
+                eos_id=text.eos_id,
+                decode_type=args.decode_type,
+                text=text,
+                beam_width=args.beam_width,
+                log_step=args.log_step,
+                log_text=args.log_text,
+            )
+            # Загружаем только веса
+            state_dict = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+            model.load_state_dict(state_dict)
+        else:
+            print(
+                "[INFO] Loading full checkpoint (including hyperparameters, scheduler, etc)."
+            )
+            model = Image2LatexModel.load_from_checkpoint(ckpt_path)
+    else:
+        print("[INFO] Starting model from scratch.")
+        model = Image2LatexModel(
+            lr=args.lr,
+            total_steps=total_steps,
+            n_class=text.n_class,
+            enc_dim=args.enc_dim,
+            enc_type=args.enc_type,
+            emb_dim=args.emb_dim,
+            dec_dim=args.dec_dim,
+            attn_dim=args.attn_dim,
+            num_layers=args.num_layers,
+            dropout=args.dropout,
+            sos_id=text.sos_id,
+            eos_id=text.eos_id,
+            decode_type=args.decode_type,
+            text=text,
+            beam_width=args.beam_width,
+            log_step=args.log_step,
+            log_text=args.log_text,
+        )
 
-    
-
+    # === TRAIN ===
     if args.train:
         print("=" * 10 + "[Train]" + "=" * 10)
-        trainer.fit(datamodule=dm, model=model, ckpt_path=ckpt_path)
+        trainer.fit(
+            datamodule=dm,
+            model=model,
+            ckpt_path=None if args.rewrite_checkpoint_fitting else ckpt_path,
+        )
 
+    # === VALIDATE ===
     if args.val:
         print("=" * 10 + "[Validate]" + "=" * 10)
-        trainer.validate(datamodule=dm, model=model, ckpt_path=ckpt_path)
+        trainer.validate(datamodule=dm, model=model)
 
+    # === TEST ===
     if args.test:
         print("=" * 10 + "[Test]" + "=" * 10)
-        trainer.test(datamodule=dm, model=model, ckpt_path=ckpt_path)
+        trainer.test(datamodule=dm, model=model)
 
+    # === PREDICT ===
     if args.predict:
         print("=" * 10 + "[Predict]" + "=" * 10)
-        trainer.predict(datamodule=dm, model=model, ckpt_path=ckpt_path)
+        trainer.predict(datamodule=dm, model=model)
