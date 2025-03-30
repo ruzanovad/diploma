@@ -194,14 +194,13 @@ if __name__ == "__main__":
     logger = FileLogger(args.train, args.val, args.test, args.predict)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    profiler = AdvancedProfiler(
-        dirpath="logs/profiler",  # where to save
-        filename=f"{timestamp}-profile.txt",  # filename
-    )
-
+    
     trainer = pl.Trainer(
         logger=[tb_logger, logger],
-        profiler=profiler,
+    #     profiler=AdvancedProfiler(
+    #     dirpath="logs/profiler",  # where to save
+    #     filename=f"{timestamp}-profile.txt",  # filename
+    # ),
         callbacks=[lr_monitor, checkpoint_callback],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
