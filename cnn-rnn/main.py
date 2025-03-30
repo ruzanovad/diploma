@@ -19,6 +19,7 @@ import math
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.profilers import AdvancedProfiler
 
+
 class FileLogger(Logger):
     def __init__(self, train: bool, val: bool, test: bool, predict: bool):
         super().__init__()
@@ -92,7 +93,8 @@ if __name__ == "__main__":
     parser.add_argument("--random-state", type=int, default=12)
     parser.add_argument("--ckpt-path", type=str, default=None)
     parser.add_argument("--enc-type", type=str, default="resnet_encoder")
-    # conv_row_encoder, conv_encoder, conv_bn_encoder
+    # conv_row_encoder, conv_encoder, conv_bn_encoder resnet_row_encoder
+
     parser.add_argument("--enc-dim", type=int, default=512)
     parser.add_argument("--emb-dim", type=int, default=80)
     parser.add_argument("--attn-dim", type=int, default=512)
@@ -114,12 +116,15 @@ if __name__ == "__main__":
     By rescaling the error derivative, the updates to the weights will also be rescaled, 
     dramatically decreasing the likelihood of an overflow or underflow.
     """
-    parser.add_argument("--grad-clip", type=int, default=0)
+    parser.add_argument("--grad-clip", type=float, default=0)
 
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--notebook", action="store_true")
     parser.add_argument("--rewrite-checkpoint-fitting", action="store_true")
+    parser.add_argument("--max-time", type=str, default="00:06:00:00")
+    parser.add_argument("--checkpoints-path", type=str, default="checkpoints")
+    parser.add_argument("--tb-logs-path", type=str, default="tb_logs")
 
     args = parser.parse_args()
 
@@ -173,11 +178,11 @@ if __name__ == "__main__":
     )
 
     tb_logger = pl.loggers.tensorboard.TensorBoardLogger(
-        "tb_logs", name="image2latex_model", log_graph=True
+        save_dir=args.tb_logs_path, name="image2latex_model", log_graph=True
     )
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        dirpath="checkpoints/",
+        dirpath=args.checkpoints_path,
         filename="model-{epoch:02d}-{val_loss:.3f}",
         monitor="val_loss",
         mode="min",
@@ -206,6 +211,7 @@ if __name__ == "__main__":
         accumulate_grad_batches=accumulate_grad_batches,
         devices=-1 if args.gpu else 1,
         num_sanity_val_steps=1,
+        max_time=args.max_time,
     )
 
     ckpt_path = args.ckpt_path

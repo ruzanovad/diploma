@@ -41,8 +41,8 @@ class Image2Latex(nn.Module):
         #     self.encoder = ConvBNEncoder(enc_dim=enc_dim)
         if enc_type == "resnet_encoder":
             self.encoder = ResNetEncoder(enc_dim=enc_dim)
-        # elif enc_type == "resnet_row_encoder":
-        #     self.encoder = ResNetWithRowEncoder(enc_dim=enc_dim)
+        elif enc_type == "resnet_row_encoder":
+            self.encoder = ResNetWithRowEncoder(enc_dim=enc_dim)
         # enc_dim = self.encoder.enc_dim
         self.num_layers = num_layers
         self.decoder = Decoder(
