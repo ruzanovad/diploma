@@ -122,7 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--notebook", action="store_true")
     parser.add_argument("--rewrite-checkpoint-fitting", action="store_true")
-    parser.add_argument("--max-time", type=str, default="00:06:00:00")
+    # parser.add_argument("--max-time", type=str, default="00:12:00:00")
     parser.add_argument("--checkpoints-path", type=str, default="checkpoints")
     parser.add_argument("--tb-logs-path", type=str, default="tb_logs")
 
@@ -194,13 +194,13 @@ if __name__ == "__main__":
     logger = FileLogger(args.train, args.val, args.test, args.predict)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    
+
     trainer = pl.Trainer(
         logger=[tb_logger, logger],
-    #     profiler=AdvancedProfiler(
-    #     dirpath="logs/profiler",  # where to save
-    #     filename=f"{timestamp}-profile.txt",  # filename
-    # ),
+        #     profiler=AdvancedProfiler(
+        #     dirpath="logs/profiler",  # where to save
+        #     filename=f"{timestamp}-profile.txt",  # filename
+        # ),
         callbacks=[lr_monitor, checkpoint_callback],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         accumulate_grad_batches=accumulate_grad_batches,
         devices=-1 if args.gpu else 1,
         num_sanity_val_steps=1,
-        max_time=args.max_time,
+        # max_time=args.max_time,
     )
 
     ckpt_path = args.ckpt_path
