@@ -160,7 +160,7 @@ class Image2LatexModel(pl.LightningModule):
             )
         )
 
-        if self.log_text and (batch_idx % self.log_step == 0):
+        if self.log_text and ((batch_idx % self.log_step) == 0):
             truth, pred = truths[0], predicts[0]
             rank_zero_info("=" * 20)
             rank_zero_info(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
@@ -218,7 +218,7 @@ class Image2LatexModel(pl.LightningModule):
         ]
         em = torch.tensor(em_scores).mean()
 
-        if self.log_text and batch_idx % self.log_step == 0:
+        if self.log_text and ((batch_idx % self.log_step) == 0):
             truth, pred = truths[0], predicts[0]
             rank_zero_info("=" * 20)
             rank_zero_info(f"Truth: [{' '.join(truth)}] \nPredict: [{' '.join(pred)}]")
@@ -231,7 +231,6 @@ class Image2LatexModel(pl.LightningModule):
 
         return edit_dist, bleu4, em, loss
 
-    
     def predict_step(self, batch, batch_idx):
         image = batch
 
