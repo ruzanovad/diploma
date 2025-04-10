@@ -7,7 +7,10 @@ import math
 import os
 
 
-class LatexDataset(Dataset):
+class LatexDataset(Dataset): 
+    """
+    Dataset class for the im2latex project
+    """
     def __init__(
         self, data_path, img_path, data_type: str, n_sample: int = None, dataset="100k"
     ):

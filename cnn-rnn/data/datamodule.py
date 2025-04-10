@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import torch
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
@@ -6,6 +7,22 @@ from torchvision import transforms as tvt
 
 
 class DataModule(pl.LightningDataModule):
+    """
+    PyTorch Lightning DataModule for the im2latex project.
+
+    This module handles all data loading and preprocessing logic for training,
+    validation, testing, and prediction phases. It expects datasets that return 
+    tuples of (image_tensor, formula_string).
+
+    Args:
+        train_set (Dataset): Training dataset.
+        val_set (Dataset): Validation dataset.
+        test_set (Dataset): Test dataset.
+        predict_set (Dataset): Prediction dataset.
+        num_workers (int): Number of workers for data loading (default=4).
+        batch_size (int): Batch size (default=20).
+        text (TextEncoder): Helper object for converting formulas to integer token IDs.
+    """
     def __init__(
         self,
         train_set,
@@ -25,8 +42,10 @@ class DataModule(pl.LightningDataModule):
         self.text = text
         self.num_workers = num_workers
 
-
     def train_dataloader(self):
+        """
+        Returns the training DataLoader with shuffling and batching.
+        """
         return DataLoader(
             self.train_set,
             shuffle=True,
@@ -39,6 +58,9 @@ class DataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
+        """
+        Returns the validation DataLoader without shuffling.
+        """
         return DataLoader(
             self.val_set,
             shuffle=False,
@@ -50,6 +72,9 @@ class DataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
+        """
+        Returns the test DataLoader without shuffling.
+        """
         return DataLoader(
             self.test_set,
             shuffle=False,
@@ -61,14 +86,34 @@ class DataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self):
-        return DataLoader(self.predict_set, shuffle=False, batch_size=self.batch_size,)
+        """
+        Returns the prediction DataLoader.
+        """
+        return DataLoader(
+            self.predict_set,
+            shuffle=False,
+            batch_size=self.batch_size,
+        )
 
-    """Collate function
-    collate_fn receives a list of tuples if __getitem__ 
-    function from a Dataset subclass returns a tuple, or just a normal 
-    list if Dataset subclass returns only one element. Its main objective 
-    is to create your batch without spending much time implementing it manually"""
-    def collate_fn(self, batch):
+
+    def collate_fn(self, batch : List[Tuple[torch.Tensor, str]]):
+        """
+        Custom collate function for batching samples.
+
+        Each sample is a tuple (image_tensor, formula_string).
+        This function:
+            - Pads tokenized formulas to the same length with SOS/EOS tokens.
+            - Pads images to the same spatial dimensions (max height and width in batch).
+            - Returns a batch of padded images and formulas.
+
+        Args:
+            batch (List[Tuple[Tensor, str]]): List of samples from the dataset.
+
+        Returns:
+            images (Tensor): Batched and padded image tensors, shape (B, C, H, W).
+            formulas (Tensor): Batched tokenized formulas with <s> and <e>, shape (B, L).
+            formula_len (Tensor): Lengths of original formulas (before padding), shape (B,).
+        """
         size = len(batch)
         formulas = [self.text.text2int(i[1]) for i in batch]
         formula_len = torch.LongTensor([i.size(-1) + 1 for i in formulas])

@@ -66,7 +66,7 @@ class Image2Latex(nn.Module):
 
     def init_decoder_hidden_state(self, V: Tensor):
         """
-            return (h, c)
+        return (h, c)
         """
         encoder_mean = V.mean(dim=1)
         h = torch.tanh(self.init_h(encoder_mean))
@@ -104,8 +104,6 @@ class Image2Latex(nn.Module):
 
         y = torch.LongTensor([self.decoder.sos_id]).view(bs, -1)
 
-        hidden_state = self.init_decoder_hidden_state(encoder_out)
-
         predictions = []
         for t in range(max_length):
             out, hidden_state = self.decoder(y, encoder_out, hidden_state)
@@ -119,7 +117,7 @@ class Image2Latex(nn.Module):
 
     def decode_beam_search(self, x: Tensor, max_length: int = 150):
         """
-            default: batch size equal to 1
+        default: batch size equal to 1
         """
         encoder_out = self.encoder(x)
         bs = encoder_out.size(0)  # 1

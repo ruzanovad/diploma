@@ -2,7 +2,6 @@ import torch
 from torch import nn, Tensor
 from .im2latex import Image2Latex
 from .text import Text
-from .utils import exact_match
 import pytorch_lightning as pl
 from torchaudio.functional import edit_distance
 from evaluate import load
@@ -231,6 +230,7 @@ class Image2LatexModel(pl.LightningModule):
 
         return edit_dist, bleu4, em, loss
 
+    @torch.no_grad
     def predict_step(self, batch, batch_idx):
         image = batch
 
