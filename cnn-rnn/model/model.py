@@ -124,7 +124,7 @@ class Image2LatexModel(pl.LightningModule):
         edit_dist = torch.mean(
             torch.Tensor(
                 [
-                    edit_distance(tru, pre) / len(tru)
+                    edit_distance(tru, pre)
                     for pre, tru in zip(predicts, truths)
                 ]
             )
