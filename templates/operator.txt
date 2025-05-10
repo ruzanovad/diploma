@@ -6,11 +6,9 @@
 \log
 \ln
 \exp
-\sqrt
 \arcsin
 \arccos
 \arctan
-\frac
 \int
 \sum
 \prod

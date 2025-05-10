@@ -300,6 +300,7 @@ def generate_formula(
     probabilities = [w / total_inv for w in inv_weights]
 
     chosen_alt = random.choices(alternatives, weights=probabilities, k=1)[0]
+
     total_counts = {}
     result = []
     for token in chosen_alt:
@@ -348,7 +349,7 @@ def prepare_grammar_dataset_with_patterns(
     max_workers=6,
     verbose=100,
     min_length=30,
-    max_length=50,
+    max_length=70,
     test=10,
 ):
     """
@@ -366,6 +367,7 @@ def prepare_grammar_dataset_with_patterns(
     print("Generating formulas:")
     assert val > 0
     assert test > 0
+    assert verbose > 0
 
     base_dir = os.path.join("datasets", label, "dataset")
     images_dir = os.path.join(base_dir, "images")
@@ -387,8 +389,6 @@ def prepare_grammar_dataset_with_patterns(
     assert train_number + val_number + test_number == n
 
     symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
-    classes = symbols_dict.keys()
-
     # formulas = []
 
     counter = 0
@@ -407,18 +407,20 @@ def prepare_grammar_dataset_with_patterns(
             counter += 1
             if verbose and counter % verbose == 0:
                 print(f"LOG=={counter}")
-            selected_classes = classes.intersection(dict_tokens.keys())
+            selected_classes = [
+                x for x in symbols_dict.keys() if x in dict_tokens.keys()
+            ]
             fill_file(
                 images_train_dir,
                 labels_train_dir,
                 counter,
                 " ".join(formula),
-                selected_classes,
+                {key.strip(): symbols_dict[key.strip()] for key in selected_classes},
                 suffix="train",
                 label=label,
             )
         else:
-            print("Regenerate...")
+            # print("Regenerate...")
             continue
     if val != 0:
         while counter < train_number + val_number:
@@ -436,13 +438,19 @@ def prepare_grammar_dataset_with_patterns(
                 counter += 1
                 if verbose and counter % verbose == 0:
                     print(f"LOG=={counter}")
-                selected_classes = classes.intersection(dict_tokens.keys())
+                selected_classes = [
+                    x for x in symbols_dict.keys() if x in dict_tokens.keys()
+                ]
+
                 fill_file(
                     images_val_dir,
                     labels_val_dir,
                     counter,
                     " ".join(formula),
-                    selected_classes,
+                    {
+                        key.strip(): symbols_dict[key.strip()]
+                        for key in selected_classes
+                    },
                     suffix="val",
                     label=label,
                 )
@@ -465,13 +473,18 @@ def prepare_grammar_dataset_with_patterns(
                 counter += 1
                 if verbose and counter % verbose == 0:
                     print(f"LOG=={counter}")
-                selected_classes = classes.intersection(dict_tokens.keys())
+                selected_classes = [
+                    x for x in symbols_dict.keys() if x in dict_tokens.keys()
+                ]
                 fill_file(
                     images_val_dir,
                     labels_val_dir,
                     counter,
                     " ".join(formula),
-                    selected_classes,
+                    {
+                        key.strip(): symbols_dict[key.strip()]
+                        for key in selected_classes
+                    },
                     suffix="test",
                     label=label,
                 )
@@ -483,6 +496,7 @@ def prepare_grammar_dataset_with_patterns(
     for ext in ["aux", "log", "dvi"]:
         delete_files_with_extension(images_train_dir, ext)
         delete_files_with_extension(images_val_dir, ext)
+
     # Generate dataset.yaml
     utils.generate_yolo_yaml(
         os.getenv("templates"),
@@ -1054,10 +1068,14 @@ if __name__ == "__main__":
     # print("patterns done")
     # generate_dataset(count=6000, level="variable", label=label)
     # formulas = []
-    d = defaultdict(int)
-    for _ in range(2000):
-        x = generate_formula(grammar, weights, terminal_generators, max_depth=10)
-        print(" ".join(x[0]))
-        for k in x[1]:
-            d[k] += 1
-    print(d)
+
+    prepare_grammar_dataset_with_patterns(
+        1000, grammar, weights, terminal_generators, "experiment"
+    )
+    # d = defaultdict(int)
+    # for _ in range(10):
+    #     x = generate_formula(grammar, weights, terminal_generators, max_depth=10)
+    #     print(" ".join(x[0]))
+    #     for k in x[1]:
+    #         d[k] += 1
+    # print(d)
