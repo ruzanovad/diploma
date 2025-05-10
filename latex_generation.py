@@ -1,3 +1,4 @@
+from email.policy import default
 from math import e
 import subprocess
 import os
@@ -7,6 +8,7 @@ from PIL import Image
 from dotenv import load_dotenv
 from concurrent.futures import ProcessPoolExecutor  # for concurrency
 from functools import partial  # for concurrency
+from collections import Counter, defaultdict
 import utils
 import yaml
 import numpy as np
@@ -21,66 +23,82 @@ latex = r"""\documentclass{standalone}[border={10pt 10pt 10pt 10pt}]
 \end{document}
 """
 
+
 terminal_generators = {
-    "BINOP_FUNC": lambda: random.choice(["\\min", "\\max"]),
-    "FUNCTION": lambda: random.choice(
-        [
-            "\\sin",
-            "\\cos",
-            "\\tan",
-            "\\log",
-            "\\ln",
-            "\\exp",
-            "\\sqrt",
-            "\\arcsin",
-            "\\arccos",
-            "\\arctan",
-        ]
+    "BINOP_FUNC": lambda: (x := random.choice(["\\min", "\\max"]), {x: 1}),
+    "FUNCTION": lambda: (
+        x := random.choice(
+            [
+                "\\sin",
+                "\\cos",
+                "\\tan",
+                "\\log",
+                "\\ln",
+                "\\exp",
+                "\\sqrt",
+                "\\arcsin",
+                "\\arccos",
+                "\\arctan",
+            ]
+        ),
+        {x: 1},
     ),
-    "FRAC": lambda: "\\frac",
+    "FRAC": lambda: ("\\frac", {"\\frac": 1}),
     "NUMBER": lambda: (
-        str(random.randint(1, 9))
-        if random.random() < 0.8
-        else str(random.randint(0, 9999)) + "." + str(random.randint(0, 9999))
+        x := (
+            str(random.randint(1, 9))
+            if random.random() < 0.3
+            else f"{random.randint(0, 9999)}.{random.randint(0, 9999)}"
+        ),
+        dict(Counter(x)),
     ),
-    "GREEK": lambda: random.choice(
-        [
-            "\\alpha",
-            "\\beta",
-            "\\gamma",
-            "\\delta",
-            "\\epsilon",
-            "\\zeta",
-            "\\eta",
-            "\\phi",
-            "\\kappa",
-            "\\lambda",
-            "\\mu",
-            "\\nu",
-            "\\xi",
-            "\\pi",
-            "\\rho",
-            "\\sigma",
-            "\\tau",
-            "\\varepsilon",
-            "\\phi",
-            "\\varphi",
-            "\\chi",
-            "\\psi",
-            "\\omega",
-        ]
+    "GREEK": lambda: (
+        x := random.choice(
+            [
+                "\\alpha",
+                "\\beta",
+                "\\gamma",
+                "\\delta",
+                "\\epsilon",
+                "\\zeta",
+                "\\eta",
+                "\\phi",
+                "\\kappa",
+                "\\lambda",
+                "\\mu",
+                "\\nu",
+                "\\xi",
+                "\\pi",
+                "\\rho",
+                "\\sigma",
+                "\\tau",
+                "\\varepsilon",
+                "\\phi",
+                "\\varphi",
+                "\\chi",
+                "\\psi",
+                "\\omega",
+            ]
+        ),
+        {x: 1},
     ),
-    "LATIN": lambda: "".join(
-        random.choices("abcdefghijklmnopqrstuvwxyz", k=random.randint(1, 4))
+    "LATIN": lambda: (
+        x := "".join(
+            random.choices("abcdefghijklmnopqrstuvwxyz", k=random.randint(1, 4))
+        ),
+        dict(Counter(x)),
     ),
-    "CAPS_LATIN": lambda: "".join(
-        random.choices("abcdefghijklmnopqrstuvwxyz".upper(), k=random.randint(1, 4))
+    "CAPS_LATIN": lambda: (
+        x := "".join(
+            random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=random.randint(1, 4))
+        ),
+        dict(Counter(x)),
     ),
-    "INTEGRAL": lambda: "\\int",
-    "SUMMARY": lambda: "\\sum",
-    "PROD": lambda: "\\prod",
-    "LIMIT": lambda: "\\lim",
-}
+    "INTEGRAL": lambda: ("\\int", {"\\int": 1}),
+    "SUMMARY": lambda: ("\\sum", {"\\sum": 1}),
+    "PROD": lambda: ("\\prod", {"\\prod": 1}),
+    "LIMIT": lambda: ("\\lim", {"\\lim": 1}),
+}  # Возвращает случайный терминал из заданного списка вместе со словарем частот.
 
 
 def get_terminal():
@@ -103,19 +121,49 @@ def get_terminal():
     ]()
 
 
+def merge_freqs(items):
+    """Объединяет словари частот из списка кортежей (значение, словарь)."""
+    merged = Counter()
+    values = []
+    for val, freq in items:
+        values.append(val)
+        merged.update(freq)
+    return values, dict(merged)
+
+
 # Словарь fallback-значений для нетерминалов, чтобы на максимальной глубине ветка завершалась корректно.
 fallback_dict = {
-    "expr": ["-", get_terminal()] if random.random() < 0.5 else [get_terminal()],
-    "sum": [get_terminal(), "+", get_terminal()],
-    "product": [get_terminal()],
-    "power": [get_terminal()],
-    "postfix": [get_terminal()],
-    "primary": [get_terminal()],
-    "group": ["{", get_terminal(), "}"],
-    "frac_expr": ["{", get_terminal(), "}", "{", get_terminal(), "}"],
-    "integral_limits": [get_terminal()],
-    "expr_opt": [get_terminal()],
-    "limit_limits": [terminal_generators["LATIN"](), "=", " ", get_terminal()],
+    "expr": (
+        merge_freqs([("-", {"-": 1}), get_terminal()])
+        if random.random() < 0.5
+        else merge_freqs([get_terminal()])
+    ),
+    "sum": merge_freqs([get_terminal(), ("+", {"+": 1}), get_terminal()]),
+    "product": merge_freqs([get_terminal()]),
+    "power": merge_freqs([get_terminal()]),
+    "postfix": merge_freqs([get_terminal()]),
+    "primary": merge_freqs([get_terminal()]),
+    "group": merge_freqs([("{", {"{": 1}), get_terminal(), ("}", {"}": 1})]),
+    "frac_expr": merge_freqs(
+        [
+            ("{", {"{": 1}),
+            get_terminal(),
+            ("}", {"}": 1}),
+            ("{", {"{": 1}),
+            get_terminal(),
+            ("}", {"}": 1}),
+        ]
+    ),
+    "integral_limits": merge_freqs([get_terminal()]),
+    "expr_opt": merge_freqs([get_terminal()]),
+    "limit_limits": merge_freqs(
+        [
+            terminal_generators["LATIN"](),
+            ("=", {"=": 1}),
+            (" ", {" ": 1}),
+            get_terminal(),
+        ]
+    ),
 }
 
 grammar = {
@@ -128,10 +176,10 @@ grammar = {
     ],
     "product": [
         ["power"],
-        ["product", "\\cdot", " ", "power"],
-        ["product", "\\times", " ", "power"],
-        ["product", "/", " ", "power"],
-        ["product", "BINOP_FUNC", " ", "power"],
+        ["product", "\\cdot", "power"],
+        ["product", "\\times", "power"],
+        ["product", "/", "power"],
+        ["product", "BINOP_FUNC", "power"],
     ],
     "power": [
         ["{", "postfix", "}"],
@@ -217,20 +265,21 @@ def generate_formula(
     """
     # Если глубина превышает max_depth – возвращаем пустую строку.
     if depth > max_depth:
-        return "", {}
+        return [], {}
 
     # Если мы на максимальной глубине и symbol – нетерминал, возвращаем fallback.
     if depth == max_depth and symbol in grammar:
-        token = fallback_dict.get(symbol, "")
-        return token, {token: 1}
+        token, terminals = fallback_dict.get(symbol, "")
+        return token, terminals
 
     # Если symbol не является ключом грамматики, значит это терминал.
     if symbol not in grammar:
         if symbol in terminal_generators:
-            token = terminal_generators[symbol]()
+            token, freqs = terminal_generators[symbol]()
+            return [token], freqs
         else:
             token = symbol
-        return token, {token: 1}
+            return [token], {token: 1}
 
     alternatives = grammar[symbol]
     alt_weights = []
@@ -258,7 +307,10 @@ def generate_formula(
         # иначе продолжаем рекурсию.
         if token in grammar:
             if depth + 1 == max_depth:
-                result += fallback_dict.get(token, "")
+                fallback, terminals = fallback_dict.get(token, "")
+                result += fallback
+                for k, v in terminals.items():
+                    total_counts[k] = total_counts.get(k, 0) + v
             else:
                 sub_formula, sub_counts = generate_formula(
                     grammar,
@@ -275,15 +327,29 @@ def generate_formula(
                     total_counts[k] = total_counts.get(k, 0) + v
         else:
             if token in terminal_generators:
-                result += [terminal_generators[token]()]
+                value, dictionary = terminal_generators[token]()
+                result += [value]
+                for k, v in dictionary.items():
+                    total_counts[k] = total_counts.get(k, 0) + v
             else:
                 result += [token]
+                total_counts[token] = total_counts.get(token, 0) + 1
 
     return result, total_counts
 
 
-def prepare_grammar_dataset(
-    n, grammar, weights, terminal_generators, label, train=90, max_workers=6, verbose=100
+def prepare_grammar_dataset_with_patterns(
+    n,
+    grammar,
+    weights,
+    terminal_generators,
+    label,
+    val=10,
+    max_workers=6,
+    verbose=100,
+    min_length=30,
+    max_length=50,
+    test=10,
 ):
     """
     Генерация n формул с фиксированной глубиной.
@@ -298,6 +364,8 @@ def prepare_grammar_dataset(
     # d = defaultdict(int)
 
     print("Generating formulas:")
+    assert val > 0
+    assert test > 0
 
     base_dir = os.path.join("datasets", label, "dataset")
     images_dir = os.path.join(base_dir, "images")
@@ -313,43 +381,114 @@ def prepare_grammar_dataset(
     os.makedirs(labels_train_dir, exist_ok=True)
     os.makedirs(labels_val_dir, exist_ok=True)
 
-    train_number = (n * train) // 100
-    val_number = n - train_number
+    train_number = (n * (100 - val - test)) // 100
+    val_number = (n * (val)) // 100
+    test_number = n - train_number - val_number
+    assert train_number + val_number + test_number == n
 
-    formulas = []
-    for _ in range(n):
-        formula = generate_formula(grammar, weights, terminal_generators)
-        formulas.append(formula)
-        # for k in formula[0]:
-        #     d[k] += 1
-        generate_one_with_label()
+    symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
+    classes = symbols_dict.keys()
 
-    train_args = [
-        (
-            i,
-            *get_random_content(i),
-            images_train_dir,
-            labels_train_dir,
-            verbose,
-            label,
+    # formulas = []
+
+    counter = 0
+    while counter < train_number:
+        formula, dict_tokens = generate_formula(
+            grammar,
+            weights,
+            terminal_generators,
+            symbol="start",
+            depth=0,
+            max_depth=10,
+            recursion_bonus=0.5,
+            default_weight=0.8,
         )
-        for i in range(train_number)
-    ]
+        if min_length <= len(formula) <= max_length:
+            counter += 1
+            if verbose and counter % verbose == 0:
+                print(f"LOG=={counter}")
+            selected_classes = classes.intersection(dict_tokens.keys())
+            fill_file(
+                images_train_dir,
+                labels_train_dir,
+                counter,
+                " ".join(formula),
+                selected_classes,
+                suffix="train",
+                label=label,
+            )
+        else:
+            print("Regenerate...")
+            continue
+    if val != 0:
+        while counter < train_number + val_number:
+            formula, dict_tokens = generate_formula(
+                grammar,
+                weights,
+                terminal_generators,
+                symbol="start",
+                depth=0,
+                max_depth=10,
+                recursion_bonus=0.5,
+                default_weight=0.8,
+            )
+            if min_length <= len(formula) <= max_length:
+                counter += 1
+                if verbose and counter % verbose == 0:
+                    print(f"LOG=={counter}")
+                selected_classes = classes.intersection(dict_tokens.keys())
+                fill_file(
+                    images_val_dir,
+                    labels_val_dir,
+                    counter,
+                    " ".join(formula),
+                    selected_classes,
+                    suffix="val",
+                    label=label,
+                )
+            else:
+                print("Regenerate...")
+                continue
+    if test != 0:
+        while counter < n:
+            formula, dict_tokens = generate_formula(
+                grammar,
+                weights,
+                terminal_generators,
+                symbol="start",
+                depth=0,
+                max_depth=10,
+                recursion_bonus=0.5,
+                default_weight=0.8,
+            )
+            if min_length <= len(formula) <= max_length:
+                counter += 1
+                if verbose and counter % verbose == 0:
+                    print(f"LOG=={counter}")
+                selected_classes = classes.intersection(dict_tokens.keys())
+                fill_file(
+                    images_val_dir,
+                    labels_val_dir,
+                    counter,
+                    " ".join(formula),
+                    selected_classes,
+                    suffix="test",
+                    label=label,
+                )
+            else:
+                print("Regenerate...")
+                continue
 
-    val_args = [
-        (
-            i,
-            *get_random_content(i),
-            images_val_dir,
-            labels_val_dir,
-            ,
-            label,
-        )
-        for i in range(train_number, train_number + val_number)
-    ]
-
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        executor.map(fill_file_job, train_args)
+    # Finally clean up aux files
+    for ext in ["aux", "log", "dvi"]:
+        delete_files_with_extension(images_train_dir, ext)
+        delete_files_with_extension(images_val_dir, ext)
+    # Generate dataset.yaml
+    utils.generate_yolo_yaml(
+        os.getenv("templates"),
+        os.path.join("datasets", label, "dataset.yaml"),
+        label,
+    )
 
 
 def load_greek_letters(file_path):
@@ -910,7 +1049,15 @@ if __name__ == "__main__":
 
     greek_letters_file = os.path.join("templates", "greek-letter.txt")
     list_of_letters = load_greek_letters(greek_letters_file)
-    label = "variable_margin_3000_uniform"
-    generate_pattern(level="variable", label=label)
-    print("patterns done")
-    generate_dataset(count=6000, level="variable", label=label)
+    # label = "variable_margin_3000_uniform"
+    # generate_pattern(level="variable", label=label)
+    # print("patterns done")
+    # generate_dataset(count=6000, level="variable", label=label)
+    # formulas = []
+    d = defaultdict(int)
+    for _ in range(2000):
+        x = generate_formula(grammar, weights, terminal_generators, max_depth=10)
+        print(" ".join(x[0]))
+        for k in x[1]:
+            d[k] += 1
+    print(d)
