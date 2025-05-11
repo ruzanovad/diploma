@@ -72,7 +72,7 @@ def load_symbols_from_templates(template_dir, all=True, files=[]):
 
 
 def generate_yolo_yaml(
-    template_dir, output_file, label, all=True, files=[]
+    template_dir, output_file, label, all=True, files=[], val=True, test=False
 ):
     symbols_dict = load_symbols_from_templates(template_dir, all, files)
 
@@ -81,11 +81,14 @@ def generate_yolo_yaml(
     yolo_config = {
         "path": os.path.join(label, "dataset"),
         "train": "images/train",
-        "val": "images/val",
         "nc": len(classes),
         "names": classes,
     }
 
+    if val:
+        yolo_config["val"] = "images/val"
+    if test:
+        yolo_config["test"] = "images/test"
     with open(output_file, "w") as file:
         yaml.dump(yolo_config, file, default_flow_style=False)
 
@@ -112,9 +115,7 @@ def stupid_encoder(
     """
     if class_to_latex == None:
         class_to_latex = get_inverted_dict(
-            load_symbols_from_templates(
-                os.getenv("templates"), all, files
-            )
+            load_symbols_from_templates(os.getenv("templates"), all, files)
         )
 
     bounding_boxes = bounding_boxes.to("cpu")
