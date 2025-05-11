@@ -186,7 +186,7 @@ def main(args: DictConfig):
     )
 
     wandb_logger = pl.loggers.wandb.WandbLogger(
-        project="morse-decoder",
+        project="latex",
         name=args.model_name,
         save_dir=args.tb_logs_path,
         log_model=True,

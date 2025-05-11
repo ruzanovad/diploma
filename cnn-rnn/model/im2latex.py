@@ -16,8 +16,8 @@ class Image2Latex(nn.Module):
         dec_dim: int = 512,
         attn_dim: int = 512,
         cnn_channels: int = 32,
-        enc_layers:int = 2,
-        nhead:int =16,
+        enc_layers: int = 2,
+        nhead: int = 16,
         num_layers: int = 1,
         dropout: float = 0.1,
         bidirectional: bool = False,
@@ -33,7 +33,7 @@ class Image2Latex(nn.Module):
             "conv_bn_encoder",
             "resnet_encoder",
             "resnet_row_encoder",
-            "transformer_encoder"
+            "transformer_encoder",
         ], "Not found encoder"
         super().__init__()
         self.n_class = n_class
@@ -48,7 +48,12 @@ class Image2Latex(nn.Module):
         elif enc_type == "resnet_row_encoder":
             self.encoder = ResNetWithRowEncoder(enc_dim=enc_dim)
         elif enc_type == "transformer_encoder":
-            self.encoder = ConvTransformerEncoder(enc_dim=enc_dim, cnn_channels=cnn_channels, num_layers=enc_layers, nhead)
+            self.encoder = ConvTransformerEncoder(
+                enc_dim=enc_dim,
+                cnn_channels=cnn_channels,
+                num_layers=enc_layers,
+                nhead=nhead,
+            )
         # enc_dim = self.encoder.enc_dim
         self.num_layers = num_layers
         self.decoder = Decoder(
