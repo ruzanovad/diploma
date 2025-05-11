@@ -9,7 +9,7 @@ from functools import partial  # for concurrency
 from collections import Counter, defaultdict
 import utils
 import yaml
-from pandas import pd
+import pandas as pd
 import numpy as np
 
 random.seed(42)
@@ -433,7 +433,8 @@ def prepare_grammar_dataset_with_patterns(
                     },
                 ]
             )
-    df = pd.DataFrame({"formula": formulas, "split": splits})
+            
+    df = pd.DataFrame({"formula": [x[0] for x in formulas], "split": splits})
 
     df.to_csv(os.path.join("datasets", label, label) + ".csv")
     print("Saving formulas")
