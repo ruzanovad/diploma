@@ -114,10 +114,10 @@ def main(args: DictConfig):
     # parser.add_argument("--num-layers", type=int, default=1)
     # parser.add_argument("--model-name", type=str, default="conv_lstm")
     # """
-    # Gradient clipping is a method where the error derivative is changed or clipped 
-    # to a threshold during backward propagation through the network, and the clipped 
-    # gradients are used to update the weights. 
-    # By rescaling the error derivative, the updates to the weights will also be rescaled, 
+    # Gradient clipping is a method where the error derivative is changed or clipped
+    # to a threshold during backward propagation through the network, and the clipped
+    # gradients are used to update the weights.
+    # By rescaling the error derivative, the updates to the weights will also be rescaled,
     # dramatically decreasing the likelihood of an overflow or underflow.
     # """
     # parser.add_argument("--grad-clip", type=float, default=0)
@@ -185,6 +185,13 @@ def main(args: DictConfig):
         save_dir=args.tb_logs_path, name="image2latex_model", log_graph=True
     )
 
+    wandb_logger = pl.loggers.wandb.WandbLogger(
+        project="morse-decoder",
+        name=args.model_name,
+        save_dir=args.tb_logs_path,
+        log_model=True,
+    )
+
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath=args.checkpoints_path,
         filename="model-{epoch:02d}-{val_loss:.3f}",
@@ -195,12 +202,12 @@ def main(args: DictConfig):
     )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
-    logger = FileLogger(args.train, args.val, args.test, args.predict)
+    # logger = FileLogger(args.train, args.val, args.test, args.predict)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     trainer = pl.Trainer(
-        logger=[tb_logger, logger],
+        logger=[tb_logger, wandb_logger],
         #     profiler=AdvancedProfiler(
         #     dirpath="logs/profiler",  # where to save
         #     filename=f"{timestamp}-profile.txt",  # filename
@@ -242,6 +249,9 @@ def main(args: DictConfig):
                 beam_width=args.beam_width,
                 log_step=args.log_step,
                 log_text=args.log_text,
+                cnn_channels=args.cnn_channels,
+                nhead=args.nhead,
+                enc_layers=args.enc_layers,
             )
             # Загружаем только веса
             state_dict = torch.load(ckpt_path, map_location="cpu")["state_dict"]
@@ -296,6 +306,7 @@ def main(args: DictConfig):
     if args.predict:
         print("=" * 10 + "[Predict]" + "=" * 10)
         trainer.predict(datamodule=dm, model=model)
+
 
 if __name__ == "__main__":
     main()

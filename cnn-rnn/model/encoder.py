@@ -1,6 +1,7 @@
 import torch
 from torch import nn, Tensor
 import torchvision
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
 class ResNetEncoder(nn.Module):
@@ -121,3 +122,119 @@ class ResNetWithRowEncoder(nn.Module):
         features = features.reshape(B, -1, C) # (B, H'*W', enc_dim)
 
         return features
+
+
+class PositionalEncoding(nn.Module):
+    """Implements the sinusoidal positional encoding for Transformer models.
+
+    This encoding adds information about the relative or absolute position of
+    tokens in a sequence to help the model understand order since Transformers
+    have no inherent notion of sequence order.
+    """
+
+    def __init__(self, d_model, max_len=5000):
+        super().__init__()
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2).float()
+            * (-torch.log(torch.tensor(10000.0)) / d_model)
+        )
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # (1, max_len, d_model)
+        # Register as buffer so it's saved with model but not trained
+        self.register_buffer("pe", pe)
+
+    def forward(self, x):
+        """
+        Add positional encoding to input tensor.
+
+        Args:
+            x (Tensor): Input sequence of shape (batch_size, seq_len, d_model)
+
+        Returns:
+            Tensor: Sequence with added positional information
+        """
+        x = x + self.pe[:, : x.size(1)]
+        return x
+
+
+
+class ConvTransformerEncoder(nn.Module):
+    """Convolutional encoder with Transformer backend for processing spectrograms.
+
+    Combines CNN feature extraction with Transformer contextual processing.
+    Typically used as the encoder in audio-to-sequence models.
+    """
+
+    def __init__(self, enc_dim=128, cnn_channels=64, num_layers=2, nhead=4):
+        """
+        Initialize the ConvTransformerEncoder module.
+
+        Args:
+            enc_dim (int): Dimension of encoder output features
+            cnn_channels (int): Base number of channels for CNN layers
+            num_layers (int): Number of Transformer encoder layers
+            nhead (int): Number of attention heads in Transformer
+        """
+        super().__init__()
+        self.enc_dim = enc_dim
+        self.cnn_channels = cnn_channels
+        self.num_layers = num_layers
+        self.nhead = nhead
+
+        # CNN frontend to reduce size and extract features
+        self.cnn = nn.Sequential(
+            # Layer 1
+            nn.Conv2d(1, cnn_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(cnn_channels),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Dropout(0.2),
+            # Layer 2
+            nn.Conv2d(
+                cnn_channels, cnn_channels * 2, kernel_size=3, stride=1, padding=1
+            ),
+            nn.BatchNorm2d(cnn_channels * 2),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Dropout(0.2),
+            # Layer 3
+            nn.Conv2d(
+                cnn_channels * 2, cnn_channels * 4, kernel_size=3, stride=1, padding=1
+            ),
+            nn.BatchNorm2d(cnn_channels * 4),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Dropout(0.2),
+            # Final projection to encoder dimension
+            nn.Conv2d(cnn_channels * 4, enc_dim, kernel_size=1),
+        )
+
+        self.positional_encoding = PositionalEncoding(enc_dim)
+
+        encoder_layer = TransformerEncoderLayer(
+            d_model=enc_dim,
+            nhead=nhead,
+            dim_feedforward=256,
+            dropout=0.1,
+            batch_first=True,
+            activation="gelu",
+        )
+        self.transformer_encoder = TransformerEncoder(
+            encoder_layer, num_layers=num_layers
+        )
+
+    def forward(self, x):
+        """
+        x: (B, 1, Freq, Time) — typically mel-spectrogram
+        Output: (B, Seq_len, enc_dim)
+        """
+        x = self.cnn(x)  # (B, enc_dim, F', T')
+        x = x.mean(dim=2)  # Average over frequency → (B, enc_dim, T')
+        x = x.permute(0, 2, 1)  # → (B, T', enc_dim)
+
+        x = self.positional_encoding(x)
+        x = self.transformer_encoder(x)  # (B, T', enc_dim)
+        return x

@@ -29,6 +29,9 @@ class Image2LatexModel(pl.LightningModule):
         eos_id: int = 2,
         log_step: int = 100,
         log_text: bool = False,
+        nhead: int = 16,
+        enc_layers: int = 2,
+        cnn_channels: int = 32,
     ):
         super().__init__()
         self.model = Image2Latex(
@@ -46,6 +49,9 @@ class Image2LatexModel(pl.LightningModule):
             beam_width,
             sos_id,
             eos_id,
+            nhead=nhead,
+            enc_layers=enc_layers,
+            cnn_channels=cnn_channels,
         )
         self.example_input_array = (
             torch.randn([1, 3, 64, 384]),  # image
@@ -123,10 +129,7 @@ class Image2LatexModel(pl.LightningModule):
 
         edit_dist = torch.mean(
             torch.Tensor(
-                [
-                    edit_distance(tru, pre)
-                    for pre, tru in zip(predicts, truths)
-                ]
+                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)]
             )
         )
 

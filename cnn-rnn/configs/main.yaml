@@ -20,6 +20,9 @@ val_sample: 1000
 test_sample: 1000
 
 # Training Hyperparameters
+cnn_channels: 32
+enc_layers: 2
+nhead: 16 
 max_epochs: 15
 log_step: 100
 lr: 0.01
