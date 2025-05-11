@@ -1,0 +1,45 @@
+# Dataset and Path Configuration
+batch_size: 16
+accumulate_batch: 32
+data_path: null
+img_path: null
+predict_img_path: null
+dataset: "100k"
+vocab_file: null
+
+# Run Modes
+train: true
+val: false
+test: false
+predict: false
+log_text: false
+
+# Sample Sizes
+train_sample: 5000
+val_sample: 1000
+test_sample: 1000
+
+# Training Hyperparameters
+max_epochs: 15
+log_step: 100
+lr: 0.01
+random_state: 12
+ckpt_path: null
+enc_type: "resnet_encoder"
+enc_dim: 512
+emb_dim: 80
+attn_dim: 512
+dec_dim: 512
+dropout: 0.1
+decode_type: "greedy"
+beam_width: 5
+num_layers: 1
+model_name: "conv_lstm"
+grad_clip: 0
+num_workers: 4
+gpu: false
+notebook: false
+rewrite_checkpoint_fitting: false
+checkpoints_path: "checkpoints"
+tb_logs_path: "tb_logs"
+

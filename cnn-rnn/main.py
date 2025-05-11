@@ -18,6 +18,8 @@ import os
 import math
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.profilers import AdvancedProfiler
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 
 class FileLogger(Logger):
@@ -63,70 +65,72 @@ class FileLogger(Logger):
             print(f"[FINALIZE] {status}", file=f)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="training image2latex")
-    parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--accumulate-batch", type=int, default=32)
-    parser.add_argument("--data-path", type=str, help="data path")
-    parser.add_argument("--img-path", type=str, help="image folder path")
-    parser.add_argument(
-        "--predict-img-path", type=str, help="image for predict path", default=None
-    )
+@hydra.main(config_path="configs", config_name="main", version_base=None)
+def main(args: DictConfig):
+    print(OmegaConf.to_yaml(args))
+    # parser = argparse.ArgumentParser(description="training image2latex")
+    # parser.add_argument("--batch-size", type=int, default=16)
+    # parser.add_argument("--accumulate-batch", type=int, default=32)
+    # parser.add_argument("--data-path", type=str, help="data path")
+    # parser.add_argument("--img-path", type=str, help="image folder path")
+    # parser.add_argument(
+    #     "--predict-img-path", type=str, help="image for predict path", default=None
+    # )
 
-    parser.add_argument(
-        "--dataset", type=str, help="choose dataset [100k, 170k]", default="100k"
-    )
-    parser.add_argument("--vocab_file", type=str, help="path to vocab file")
-    parser.add_argument("--train", action="store_true")
-    parser.add_argument("--val", action="store_true")
-    # do not use ddp with test
-    # https://github.com/Lightning-AI/pytorch-lightning/issues/12862
-    parser.add_argument("--test", action="store_true")
-    parser.add_argument("--predict", action="store_true")
-    parser.add_argument("--log-text", action="store_true")
-    parser.add_argument("--train-sample", type=int, default=5000)
-    parser.add_argument("--val-sample", type=int, default=1000)
-    parser.add_argument("--test-sample", type=int, default=1000)
-    parser.add_argument("--max-epochs", type=int, default=15)
-    parser.add_argument("--log-step", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--random-state", type=int, default=12)
-    parser.add_argument("--ckpt-path", type=str, default=None)
-    parser.add_argument("--enc-type", type=str, default="resnet_encoder")
-    # conv_row_encoder, conv_encoder, conv_bn_encoder resnet_row_encoder
+    # parser.add_argument(
+    #     "--dataset", type=str, help="choose dataset [100k, 170k]", default="100k"
+    # )
+    # parser.add_argument("--vocab_file", type=str, help="path to vocab file")
+    # parser.add_argument("--train", action="store_true")
+    # parser.add_argument("--val", action="store_true")
+    # # do not use ddp with test
+    # # https://github.com/Lightning-AI/pytorch-lightning/issues/12862
+    # parser.add_argument("--test", action="store_true")
+    # parser.add_argument("--predict", action="store_true")
+    # parser.add_argument("--log-text", action="store_true")
+    # parser.add_argument("--train-sample", type=int, default=5000)
+    # parser.add_argument("--val-sample", type=int, default=1000)
+    # parser.add_argument("--test-sample", type=int, default=1000)
+    # parser.add_argument("--max-epochs", type=int, default=15)
+    # parser.add_argument("--log-step", type=int, default=100)
+    # parser.add_argument("--lr", type=float, default=0.01)
+    # parser.add_argument("--random-state", type=int, default=12)
+    # parser.add_argument("--ckpt-path", type=str, default=None)
+    # parser.add_argument("--enc-type", type=str, default="resnet_encoder")
+    # # conv_row_encoder, conv_encoder, conv_bn_encoder resnet_row_encoder
 
-    parser.add_argument("--enc-dim", type=int, default=512)
-    parser.add_argument("--emb-dim", type=int, default=80)
-    parser.add_argument("--attn-dim", type=int, default=512)
-    parser.add_argument("--dec-dim", type=int, default=512)
-    parser.add_argument("--dropout", type=float, default=0.1)
-    parser.add_argument(
-        "--decode-type",
-        type=str,
-        default="greedy",
-        help="Choose between [greedy, beamsearch]",
-    )
-    parser.add_argument("--beam-width", type=int, default=5)
-    parser.add_argument("--num-layers", type=int, default=1)
-    parser.add_argument("--model-name", type=str, default="conv_lstm")
-    """
-    Gradient clipping is a method where the error derivative is changed or clipped 
-    to a threshold during backward propagation through the network, and the clipped 
-    gradients are used to update the weights. 
-    By rescaling the error derivative, the updates to the weights will also be rescaled, 
-    dramatically decreasing the likelihood of an overflow or underflow.
-    """
-    parser.add_argument("--grad-clip", type=float, default=0)
+    # parser.add_argument("--enc-dim", type=int, default=512)
+    # parser.add_argument("--emb-dim", type=int, default=80)
+    # parser.add_argument("--attn-dim", type=int, default=512)
+    # parser.add_argument("--dec-dim", type=int, default=512)
+    # parser.add_argument("--dropout", type=float, default=0.1)
+    # parser.add_argument(
+    #     "--decode-type",
+    #     type=str,
+    #     default="greedy",
+    #     help="Choose between [greedy, beamsearch]",
+    # )
+    # parser.add_argument("--beam-width", type=int, default=5)
+    # parser.add_argument("--num-layers", type=int, default=1)
+    # parser.add_argument("--model-name", type=str, default="conv_lstm")
+    # """
+    # Gradient clipping is a method where the error derivative is changed or clipped 
+    # to a threshold during backward propagation through the network, and the clipped 
+    # gradients are used to update the weights. 
+    # By rescaling the error derivative, the updates to the weights will also be rescaled, 
+    # dramatically decreasing the likelihood of an overflow or underflow.
+    # """
+    # parser.add_argument("--grad-clip", type=float, default=0)
 
-    parser.add_argument("--num-workers", type=int, default=4)
-    parser.add_argument("--gpu", action="store_true")
-    parser.add_argument("--notebook", action="store_true")
-    parser.add_argument("--rewrite-checkpoint-fitting", action="store_true")
-    # parser.add_argument("--max-time", type=str, default="00:12:00:00")
-    parser.add_argument("--checkpoints-path", type=str, default="checkpoints")
-    parser.add_argument("--tb-logs-path", type=str, default="tb_logs")
+    # parser.add_argument("--num-workers", type=int, default=4)
+    # parser.add_argument("--gpu", action="store_true")
+    # parser.add_argument("--notebook", action="store_true")
+    # parser.add_argument("--rewrite-checkpoint-fitting", action="store_true")
+    # # parser.add_argument("--max-time", type=str, default="00:12:00:00")
+    # parser.add_argument("--checkpoints-path", type=str, default="checkpoints")
+    # parser.add_argument("--tb-logs-path", type=str, default="tb_logs")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
@@ -292,3 +296,6 @@ if __name__ == "__main__":
     if args.predict:
         print("=" * 10 + "[Predict]" + "=" * 10)
         trainer.predict(datamodule=dm, model=model)
+
+if __name__ == "__main__":
+    main()
