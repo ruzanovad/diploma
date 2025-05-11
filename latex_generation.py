@@ -9,6 +9,7 @@ from functools import partial  # for concurrency
 from collections import Counter, defaultdict
 import utils
 import yaml
+from pandas import pd
 import numpy as np
 
 random.seed(42)
@@ -397,6 +398,8 @@ def prepare_grammar_dataset_with_patterns(
     formulas = []
     # code, content, class_dict, images_dir, labels_dir, verbose, label = args
 
+    splits = []
+
     counter = 0
     while counter < n:
         formula, dictionary = generate_formula(
@@ -410,6 +413,12 @@ def prepare_grammar_dataset_with_patterns(
             default_weight=0.8,
         )
         if min_length <= len(formula) <= max_length:
+            if counter < train_number:
+                splits.append("train")
+            elif counter >= train_number + val_number:
+                splits.append("test")
+            else:
+                splits.append("val")
             counter += 1
             selected_classes = [
                 x for x in symbols_dict.keys() if x in dictionary.keys()
@@ -424,7 +433,9 @@ def prepare_grammar_dataset_with_patterns(
                     },
                 ]
             )
+    df = pd.DataFrame({"formula": formulas, "split": splits})
 
+    df.to_csv(os.path.join("datasets", label, label) + ".csv")
     print("Saving formulas")
 
     # --- Generate the TRAIN set in parallel ---
@@ -1039,6 +1050,7 @@ def generate_dataset(
 
 
 if __name__ == "__main__":
+    random.seed(42)
     # label = "number_margin_2000"
     # generate_pattern(level="number", label=label)
     # print("patterns done")
