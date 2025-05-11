@@ -344,7 +344,7 @@ def prepare_grammar_dataset_with_patterns(
     terminal_generators,
     label,
     val=10,
-    max_workers=6,
+    max_workers=10,
     verbose=100,
     min_length=30,
     max_length=70,
@@ -396,7 +396,7 @@ def prepare_grammar_dataset_with_patterns(
     symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
     formulas = []
     # code, content, class_dict, images_dir, labels_dir, verbose, label = args
-    
+
     counter = 0
     while counter < n:
         formula, dictionary = generate_formula(
@@ -410,13 +410,20 @@ def prepare_grammar_dataset_with_patterns(
             default_weight=0.8,
         )
         if min_length <= len(formula) <= max_length:
-            counter+=1
+            counter += 1
             selected_classes = [
                 x for x in symbols_dict.keys() if x in dictionary.keys()
             ]
-            
-            formulas.append([" ".join(formula), {key.strip(): symbols_dict[key.strip()] for key in selected_classes},
-                ])
+
+            formulas.append(
+                [
+                    " ".join(formula),
+                    {
+                        key.strip(): symbols_dict[key.strip()]
+                        for key in selected_classes
+                    },
+                ]
+            )
 
     print("Saving formulas")
 
@@ -451,7 +458,7 @@ def prepare_grammar_dataset_with_patterns(
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             executor.map(fill_file_job, val_args)
 
-    # --- Generate the VAL set in parallel ---
+    # --- Generate the TEST set in parallel ---
     if test > 0:
 
         test_args = [
@@ -467,7 +474,6 @@ def prepare_grammar_dataset_with_patterns(
         ]
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             executor.map(fill_file_job, test_args)
-
 
     # Finally clean up aux files
     for ext in ["aux", "log", "dvi"]:
