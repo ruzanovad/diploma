@@ -1,5 +1,3 @@
-from email.policy import default
-from math import e
 import subprocess
 import os
 import glob
@@ -367,7 +365,7 @@ def prepare_grammar_dataset_with_patterns(
     print("Generating formulas:")
     assert val > 0
     assert test > 0
-    assert verbose > 0
+    assert verbose > 1
 
     base_dir = os.path.join("datasets", label, "dataset")
     images_dir = os.path.join(base_dir, "images")
@@ -375,13 +373,20 @@ def prepare_grammar_dataset_with_patterns(
 
     images_train_dir = os.path.join(images_dir, "train")
     images_val_dir = os.path.join(images_dir, "val")
+    images_test_dir = os.path.join(images_dir, "test")
+
     labels_train_dir = os.path.join(labels_dir, "train")
     labels_val_dir = os.path.join(labels_dir, "val")
+    labels_test_dir = os.path.join(labels_dir, "test")
 
     os.makedirs(images_train_dir, exist_ok=True)
-    os.makedirs(images_val_dir, exist_ok=True)
     os.makedirs(labels_train_dir, exist_ok=True)
-    os.makedirs(labels_val_dir, exist_ok=True)
+    if val > 0:
+        os.makedirs(images_val_dir, exist_ok=True)
+        os.makedirs(labels_val_dir, exist_ok=True)
+    if test > 0:
+        os.makedirs(images_test_dir, exist_ok=True)
+        os.makedirs(labels_test_dir, exist_ok=True)
 
     train_number = (n * (100 - val - test)) // 100
     val_number = (n * (val)) // 100
@@ -389,11 +394,12 @@ def prepare_grammar_dataset_with_patterns(
     assert train_number + val_number + test_number == n
 
     symbols_dict = utils.load_symbols_from_templates(os.getenv("templates"))
-    # formulas = []
-
+    formulas = []
+    # code, content, class_dict, images_dir, labels_dir, verbose, label = args
+    
     counter = 0
-    while counter < train_number:
-        formula, dict_tokens = generate_formula(
+    while counter < n:
+        formula, dictionary = generate_formula(
             grammar,
             weights,
             terminal_generators,
@@ -404,93 +410,64 @@ def prepare_grammar_dataset_with_patterns(
             default_weight=0.8,
         )
         if min_length <= len(formula) <= max_length:
-            counter += 1
-            if verbose and counter % verbose == 0:
-                print(f"LOG=={counter}")
+            counter+=1
             selected_classes = [
-                x for x in symbols_dict.keys() if x in dict_tokens.keys()
+                x for x in symbols_dict.keys() if x in dictionary.keys()
             ]
-            fill_file(
+            
+            formulas.append([" ".join(formula), {key.strip(): symbols_dict[key.strip()] for key in selected_classes},
+                ])
+
+    print("Saving formulas")
+
+    # --- Generate the TRAIN set in parallel ---
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        train_args = [
+            (
+                i,
+                *formulas[i],
                 images_train_dir,
                 labels_train_dir,
-                counter,
-                " ".join(formula),
-                {key.strip(): symbols_dict[key.strip()] for key in selected_classes},
-                suffix="train",
-                label=label,
+                verbose,
+                label,
             )
-        else:
-            # print("Regenerate...")
-            continue
-    if val != 0:
-        while counter < train_number + val_number:
-            formula, dict_tokens = generate_formula(
-                grammar,
-                weights,
-                terminal_generators,
-                symbol="start",
-                depth=0,
-                max_depth=10,
-                recursion_bonus=0.5,
-                default_weight=0.8,
-            )
-            if min_length <= len(formula) <= max_length:
-                counter += 1
-                if verbose and counter % verbose == 0:
-                    print(f"LOG=={counter}")
-                selected_classes = [
-                    x for x in symbols_dict.keys() if x in dict_tokens.keys()
-                ]
+            for i in range(train_number)
+        ]
+        executor.map(fill_file_job, train_args)
 
-                fill_file(
-                    images_val_dir,
-                    labels_val_dir,
-                    counter,
-                    " ".join(formula),
-                    {
-                        key.strip(): symbols_dict[key.strip()]
-                        for key in selected_classes
-                    },
-                    suffix="val",
-                    label=label,
-                )
-            else:
-                print("Regenerate...")
-                continue
-    if test != 0:
-        while counter < n:
-            formula, dict_tokens = generate_formula(
-                grammar,
-                weights,
-                terminal_generators,
-                symbol="start",
-                depth=0,
-                max_depth=10,
-                recursion_bonus=0.5,
-                default_weight=0.8,
+    # --- Generate the VAL set in parallel ---
+    if val > 0:
+        val_args = [
+            (
+                i,
+                *formulas[i],
+                images_val_dir,
+                labels_val_dir,
+                verbose,
+                label,
             )
-            if min_length <= len(formula) <= max_length:
-                counter += 1
-                if verbose and counter % verbose == 0:
-                    print(f"LOG=={counter}")
-                selected_classes = [
-                    x for x in symbols_dict.keys() if x in dict_tokens.keys()
-                ]
-                fill_file(
-                    images_val_dir,
-                    labels_val_dir,
-                    counter,
-                    " ".join(formula),
-                    {
-                        key.strip(): symbols_dict[key.strip()]
-                        for key in selected_classes
-                    },
-                    suffix="test",
-                    label=label,
-                )
-            else:
-                print("Regenerate...")
-                continue
+            for i in range(train_number, train_number + val_number)
+        ]
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(fill_file_job, val_args)
+
+    # --- Generate the VAL set in parallel ---
+    if test > 0:
+
+        test_args = [
+            (
+                i,
+                *formulas[i],
+                images_val_dir,
+                labels_val_dir,
+                verbose,
+                label,
+            )
+            for i in range(train_number + val_number, n)
+        ]
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(fill_file_job, test_args)
+
 
     # Finally clean up aux files
     for ext in ["aux", "log", "dvi"]:
@@ -1070,7 +1047,7 @@ if __name__ == "__main__":
     # formulas = []
 
     prepare_grammar_dataset_with_patterns(
-        1000, grammar, weights, terminal_generators, "experiment"
+        100000, grammar, weights, terminal_generators, "experiment"
     )
     # d = defaultdict(int)
     # for _ in range(10):

@@ -13,3 +13,4 @@ cnn-rnn/data/im2latex100k
 cnn-rnn/tb_logs
 cnn-rnn/checkpoints
 cnn-rnn/logs
+/.ipynb_checkpoints
