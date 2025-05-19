@@ -14,3 +14,4 @@ cnn-rnn/tb_logs
 cnn-rnn/checkpoints
 cnn-rnn/logs
 /.ipynb_checkpoints
+*.pt

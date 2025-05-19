@@ -9,20 +9,19 @@ with initialize(config_path="configs"):
 
 run_name = f"{cfg.name_prefix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
 cmd = f"""yolo train \
-    model=yolov11n.pt \
+    model=yolo11n.pt \
     data={cfg.data} \
     epochs={cfg.epochs} \
     imgsz={cfg.imgsz} \
     seed={cfg.seed} \
     device={cfg.device} \
     batch={cfg.batch} \
-    verbose={cfg.verbose} \
     augment={cfg.augment} \
-    name=run_name, \
     rect={cfg.rect} \
     plots={cfg.plots} \
     visualize={cfg.visualize} \
-    project={cfg.project}"""
+    project={cfg.project} \
+    name=run_name"""
 
 print(cmd)
 subprocess.run("wandb login", shell=True, check=True)
