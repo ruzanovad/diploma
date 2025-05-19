@@ -477,8 +477,8 @@ def prepare_grammar_dataset_with_patterns(
             (
                 i,
                 *formulas[i],
-                images_val_dir,
-                labels_val_dir,
+                images_test_dir,
+                labels_test_dir,
                 verbose,
                 label,
             )
@@ -491,6 +491,7 @@ def prepare_grammar_dataset_with_patterns(
     for ext in ["aux", "log", "dvi"]:
         delete_files_with_extension(images_train_dir, ext)
         delete_files_with_extension(images_val_dir, ext)
+        delete_files_with_extension(images_test_dir, ext)
 
     # Generate dataset.yaml
     utils.generate_yolo_yaml(
