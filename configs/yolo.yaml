@@ -2,11 +2,11 @@ defaults:
   - _self_
 
 data: "datasets/experiment/dataset.yaml"
-epochs: 120
+epochs: 100
 imgsz: 500
 seed: 42
 device: 0
-batch: 512
+batch: 256
 dropout: 0.5
 augment: true
 name_prefix: "yolo11pt"

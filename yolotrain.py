@@ -21,7 +21,7 @@ cmd = f"""yolo train \
     plots={cfg.plots} \
     visualize={cfg.visualize} \
     project={cfg.project} \
-    name=run_name"""
+    name={run_name}"""
 
 print(cmd)
 subprocess.run("wandb login", shell=True, check=True)

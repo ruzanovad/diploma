@@ -16,3 +16,4 @@ cnn-rnn/logs
 /.ipynb_checkpoints
 *.pt
 latex/
+wandb/
