@@ -5,7 +5,7 @@ data: "../datasets/experiment/dataset.yaml"
 epochs: 120
 imgsz: 500
 seed: 42
-device: all
+device: gpu
 batch: 512
 dropout: 0.5
 augment: true
