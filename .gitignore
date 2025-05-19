@@ -15,3 +15,4 @@ cnn-rnn/checkpoints
 cnn-rnn/logs
 /.ipynb_checkpoints
 *.pt
+latex/
