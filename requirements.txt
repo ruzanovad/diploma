@@ -9,3 +9,4 @@ torchvision
 ultralytics
 tensorboard
 hydra-core
+albumentations
