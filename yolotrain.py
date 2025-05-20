@@ -21,6 +21,7 @@ cmd = f"""yolo train \
     plots={cfg.plots} \
     visualize={cfg.visualize} \
     project={cfg.project} \
+    hyp=configs/hyp.yaml \
     name={run_name}"""
 
 print(cmd)
