@@ -5,6 +5,7 @@ from datetime import datetime
 
 with initialize(config_path="configs"):
     cfg = compose(config_name="yolo")
+    aug = compose(config_name="hyp")
 
 
 run_name = f"{cfg.name_prefix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -21,7 +22,19 @@ cmd = f"""yolo train \
     plots={cfg.plots} \
     visualize={cfg.visualize} \
     project={cfg.project} \
-    hyp=configs/hyp.yaml \
+    hsv_h={cfg.hsv_h} \
+    hsv_s={cfg.hsv_s} \
+    hsv_v={cfg.hsv_v} \
+    degrees={cfg.degrees} \
+    translate={cfg.translate} \
+    scale={cfg.scale} \
+    shear={cfg.shear} \
+    perspective={cfg.perspective} \
+    flipud={cfg.flipud} \
+    fliplr={cfg.fliplr} \
+    mosaic={cfg.mosaic} \
+    mixup={cfg.mixup} \
+    erasing={cfg.erasing} \
     name={run_name}"""
 
 print(cmd)
