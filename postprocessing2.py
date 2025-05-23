@@ -3,9 +3,11 @@ import numpy as np
 import yaml
 import cv2
 import pandas as pd
+from glob import glob
+from tqdm import tqdm
 
 
-with open("experiment/dataset.yaml", "r") as f:
+with open("datasets/experiment/dataset.yaml", "r") as f:
     class_map = yaml.safe_load(f)["names"]
 
 path_pred = "notebooks/runs/detect/val/labels"
@@ -22,15 +24,15 @@ def denorm(box, w, h):
     y2 = (yc + bh / 2) * h
     return [x1, y1, x2, y2]
 
-
+texts = []
 all_boxes = []
 
 # Получаем список всех файлов с предсказаниями
 df = pd.read_csv("datasets/experiment/experiment.csv")
 test_formulas = df[df['split'] == 'test']['formula'].tolist()
-label_files = sorted(os.path.join(path_pred, "*.txt"))
+label_files = sorted(glob(os.path.join(path_pred, "*.txt")))
 
-for pred_path in label_files:
+for pred_path in tqdm(label_files):
     filename = os.path.splitext(os.path.basename(pred_path))[0]
     image_path = os.path.join(path_images, f"{filename}.png")
     if not os.path.exists(image_path):
@@ -65,11 +67,20 @@ for pred_path in label_files:
                 "bbox": bbox,  # [x1, y1, x2, y2]
             }
         )
+        
+    
+    boxes = sorted(boxes, key=lambda x: x['bbox'][0])
+
+    text = [x['label'] for x in boxes]
+    texts.append(' '.join(text))
 
     all_boxes.append(boxes)
 
 
+
 if all_boxes:
-    print(all_boxes[0]) 
+    print(all_boxes[1]) 
+    print(test_formulas[1])
+    print(texts[1])
 else:
     print("No predictions found.")
