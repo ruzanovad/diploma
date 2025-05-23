@@ -81,7 +81,6 @@ def find_radicand(i, boxes):
                 dx_min=dx; cand=j
     return cand
 
-
 def to_latex(boxes, graph):
     visited=set()
     def dfs(i):
