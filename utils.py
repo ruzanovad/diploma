@@ -119,21 +119,23 @@ def stupid_encoder(
         )
 
     bounding_boxes = bounding_boxes.to("cpu")
-    # Сортировка по x, потом по y
+    # Сортировка по x
 
-    def lexsort(keys, dim=-1):
-        if keys.ndim < 2:
-            raise ValueError(f"keys must be at least 2 dimensional, but {keys.ndim=}.")
-        if len(keys) == 0:
-            raise ValueError(f"Must have at least 1 key, but {len(keys)=}.")
+    # , потом по y
+    # def lexsort(keys, dim=-1):
+    #     if keys.ndim < 2:
+    #         raise ValueError(f"keys must be at least 2 dimensional, but {keys.ndim=}.")
+    #     if len(keys) == 0:
+    #         raise ValueError(f"Must have at least 1 key, but {len(keys)=}.")
 
-        idx = keys[0].argsort(dim=dim, stable=True)
-        for k in keys[1:]:
-            idx = idx.gather(dim, k.gather(dim, idx).argsort(dim=dim, stable=True))
+    #     idx = keys[0].argsort(dim=dim, stable=True)
+    #     for k in keys[1:]:
+    #         idx = idx.gather(dim, k.gather(dim, idx).argsort(dim=dim, stable=True))
 
-        return idx
+    #     return idx
 
-    sorted_indices = lexsort(torch.stack((bounding_boxes[:, 1], bounding_boxes[:, 2])))
+    # sorted_indices = lexsort(torch.stack((bounding_boxes[:, 1], bounding_boxes[:, 2])))
+    sorted_indices = torch.argsort(bounding_boxes[:, 1])  # Сортировка по x
     sorted_boxes = bounding_boxes[sorted_indices]
     # Получаем class_id как long-тензор (для индексирования в словаре)
     class_ids = sorted_boxes[:, 0].long()
