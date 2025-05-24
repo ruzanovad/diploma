@@ -1053,26 +1053,10 @@ def generate_dataset(
 
 if __name__ == "__main__":
     random.seed(42)
-    # label = "number_margin_2000"
-    # generate_pattern(level="number", label=label)
-    # print("patterns done")
-    # generate_dataset(count=2000, level="number", label=label)
 
     greek_letters_file = os.path.join("templates", "greek-letter.txt")
     list_of_letters = load_greek_letters(greek_letters_file)
-    # label = "variable_margin_3000_uniform"
-    # generate_pattern(level="variable", label=label)
-    # print("patterns done")
-    # generate_dataset(count=6000, level="variable", label=label)
-    # formulas = []
 
     prepare_grammar_dataset_with_patterns(
         100000, grammar, weights, terminal_generators, "experiment"
     )
-    # d = defaultdict(int)
-    # for _ in range(10):
-    #     x = generate_formula(grammar, weights, terminal_generators, max_depth=10)
-    #     print(" ".join(x[0]))
-    #     for k in x[1]:
-    #         d[k] += 1
-    # print(d)
