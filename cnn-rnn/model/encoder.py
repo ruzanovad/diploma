@@ -1,7 +1,7 @@
 import torch
-from torch import nn, Tensor
-import torchvision
+from torch import Tensor, nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
+import torchvision
 
 
 class ResNetEncoder(nn.Module):

@@ -1,28 +1,31 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-import pandas as pd
-import torch
-from torch import nn, Tensor
-from model.model import Image2LatexModel
-from data.dataset import LatexDataset, LatexPredictDataset
-from data.datamodule import DataModule
-from model.text import Text100k, Text170k
-import lightning.pytorch as pl
-import argparse
-import numpy as np
-from lightning.pytorch.loggers.logger import Logger
+import datetime
+import math
+import os
 import sys
 from datetime import datetime
-import os
-import math
-from lightning.pytorch.utilities.rank_zero import rank_zero_only
-from lightning.pytorch.profilers import AdvancedProfiler
-from lightning.fabric.utilities.throughput import measure_flops
 from time import time
+
+import numpy as np
+import pandas as pd
+import torch
+from torch import Tensor, nn
+from torch.utils.data import DataLoader
+from torchvision import transforms as tvt
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
+
+import lightning.pytorch as pl
+from lightning.pytorch.loggers.logger import Logger
+from lightning.pytorch.profilers import AdvancedProfiler
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
+from lightning.fabric.utilities.throughput import measure_flops
+
+
+from data.datamodule import DataModule
+from data.dataset import LatexDataset, LatexPredictDataset
+from model.model import Image2LatexModel
+from model.text import Text100k, Text170k
 
 
 class FileLogger(Logger):

@@ -1,9 +1,10 @@
 import json
-from os import PathLike
 import re
+from abc import ABC, abstractmethod
+from os import PathLike
+
 import torch
 from torch import Tensor
-from abc import ABC, abstractmethod
 
 
 class Text(ABC):
@@ -15,6 +16,7 @@ class Text(ABC):
     - Text-to-index conversion (`text2int`)
     - Index-to-text conversion (`int2text`)
     """
+
     def __init__(self):
         self.pad_id = 0
         self.sos_id = 1
@@ -59,6 +61,7 @@ class Text100k(Text):
 
     Uses regular expressions to tokenize LaTeX-style formulas more accurately.
     """
+
     def __init__(self, vocab_file: str | PathLike):
         """
         Args:
@@ -95,6 +98,7 @@ class Text170k(Text):
 
     Uses basic whitespace tokenization (formula must already be pre-tokenized).
     """
+
     def __init__(self, vocab_file: str | PathLike):
         """
         Args:

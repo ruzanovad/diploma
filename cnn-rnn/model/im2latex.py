@@ -1,6 +1,8 @@
 import random
+
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
+
 from .decoder import Decoder
 from .encoder import *
 from .text import Text
