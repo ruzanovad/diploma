@@ -8,23 +8,28 @@ from tqdm import tqdm
 
 SUPPORTS_LIMITS = {"\\int", "\\sum", "\\prod", "\\lim"}
 
+
 def ctr(b):
     x1, y1, x2, y2 = b
     return (x1 + x2) / 2, (y1 + y2) / 2
+
 
 def w(b):
     x1, _, x2, _ = b
     return x2 - x1
 
+
 def h(b):
     _, y1, _, y2 = b
     return y2 - y1
+
 
 def horizontally_close(b1, b2, thr=0.6):
     x11, _, x12, _ = b1
     x21, _, x22, _ = b2
     overlap = max(0, min(x12, x22) - max(x11, x21))
     return overlap > thr * min(w(b1), w(b2))
+
 
 def find_radicand(i, boxes):
     xi, yi = ctr(boxes[i]["bbox"])
@@ -41,6 +46,7 @@ def find_radicand(i, boxes):
                 dx_min = dx
                 cand = j
     return cand
+
 
 def build_relation_graph(boxes, x_gap=0.6, y_gap=0.35):
     """
@@ -78,10 +84,11 @@ def build_relation_graph(boxes, x_gap=0.6, y_gap=0.35):
             boxes[i]["relations"].append({"type": rel, "child": j})
 
     for i, b in enumerate(boxes):
-        if b["label"] in {"√", "sqrt"}:
+        if b["label"] in {"\\sqrt"}:
             cand = find_radicand(i, boxes)
             if cand is not None:
                 boxes[i]["relations"].append({"type": "radicand", "child": cand})
+
 
 def to_latex(boxes):
     visited = set()
@@ -116,7 +123,6 @@ def to_latex(boxes):
         if i not in visited:
             latex.append(dfs(i))
     return "".join(latex)
-
 
 
 def denorm(box, w, h):
@@ -183,8 +189,7 @@ if __name__ == "__main__":
 
         boxes = sorted(boxes, key=lambda x: x["bbox"][0])
 
-        text = [x["label"] for x in boxes]
-        texts.append(" ".join(text))
+        texts.append(to_latex(boxes))
 
         all_boxes.append(boxes)
 

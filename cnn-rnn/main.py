@@ -8,16 +8,19 @@ from model.model import Image2LatexModel
 from data.dataset import LatexDataset, LatexPredictDataset
 from data.datamodule import DataModule
 from model.text import Text100k, Text170k
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import argparse
 import numpy as np
-from pytorch_lightning.loggers import Logger
+from lightning.pytorch.loggers.logger import Logger
 import sys
 from datetime import datetime
 import os
 import math
-from pytorch_lightning.utilities import rank_zero_only
-from pytorch_lightning.profilers import AdvancedProfiler
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
+from lightning.pytorch.profilers import AdvancedProfiler
+from lightning.fabric.utilities.throughput import measure_flops
+from time import time
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
@@ -63,6 +66,48 @@ class FileLogger(Logger):
     def finalize(self, status):
         with open(self.log_path, "a") as f:
             print(f"[FINALIZE] {status}", file=f)
+
+
+class ModelStatsLogger(pl.Callback):
+    def on_fit_start(self, trainer, pl_module):
+        logger = trainer.logger
+
+        if isinstance(logger, pl.loggers.wandb.WandbLogger):
+            # 1. Параметры модели
+            total_params = sum(p.numel() for p in pl_module.parameters())
+
+            # 2. FLOPs через meta device
+            with torch.device("meta"):
+                model = pl_module.__class__()
+                dummy_input = torch.randn(1, 3, 224, 224, device="meta")
+                fwd_fn = lambda: model(dummy_input)
+                flops = measure_flops(model, fwd_fn)
+                gflops = flops / 1e9
+
+            # 3. Скорость инференса (на CPU или GPU, в ms)
+            device = next(pl_module.parameters()).device
+            dummy_input = torch.randn(1, 3, 224, 224).to(device)
+            pl_module.eval()
+            with torch.no_grad():
+                # Warmup
+                for _ in range(10):
+                    _ = pl_module(dummy_input)
+
+                # Measure
+                start = time.time()
+                for _ in range(100):
+                    _ = pl_module(dummy_input)
+                end = time.time()
+                speed_ms = ((end - start) / 100) * 1000  # ms
+
+            # 4. Логгирование
+            logger.experiment.log(
+                {
+                    "model/parameters": total_params,
+                    "model/GFLOPs": gflops,
+                    "model/speed_PyTorch(ms)": speed_ms,
+                }
+            )
 
 
 @hydra.main(config_path="configs", config_name="main", version_base=None)
@@ -134,6 +179,7 @@ def main(args: DictConfig):
 
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
+    pl.seed_everything(args.random_state)
 
     text = None
     if args.dataset == "100k":

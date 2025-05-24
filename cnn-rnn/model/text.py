@@ -107,7 +107,7 @@ class Text170k(Text):
         self.n_class = len(self.id2word)
 
     def tokenize(self, formula: str):
-                """
+        """
         Tokenize a formula by splitting on whitespace.
 
         Args:

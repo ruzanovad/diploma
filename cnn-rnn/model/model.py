@@ -2,10 +2,10 @@ import torch
 from torch import nn, Tensor
 from .im2latex import Image2Latex
 from .text import Text
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 from torchaudio.functional import edit_distance
 from evaluate import load
-from pytorch_lightning.utilities.rank_zero import rank_zero_info
+from lightning.pytorch.utilities.rank_zero import rank_zero_info
 
 
 class Image2LatexModel(pl.LightningModule):
