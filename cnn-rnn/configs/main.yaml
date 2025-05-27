@@ -1,11 +1,13 @@
 # Dataset and Path Configuration
 batch_size: 16
 accumulate_batch: 32
-data_path: null
-img_path: null
-predict_img_path: null
+data_path_train: "data/im2latex100k/im2latex_train.csv"
+data_path_validate: "data/im2latex100k/im2latex_validate.csv"
+data_path_test: "data/im2latex100k/im2latex_test.csv"
+img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
+predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 dataset: "100k"
-vocab_file: null
+vocab_file: "data/vocab/latex_tokens.json"
 
 # Run Modes
 train: true

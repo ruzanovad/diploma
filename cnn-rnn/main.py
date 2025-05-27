@@ -17,6 +17,7 @@ from omegaconf import DictConfig, OmegaConf
 
 import lightning.pytorch as pl
 from lightning.pytorch.loggers.logger import Logger
+
 # from lightning.pytorch.profilers import AdvancedProfiler
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from lightning.fabric.utilities.throughput import measure_flops
@@ -166,16 +167,16 @@ def main(args: DictConfig):
     """
     Main entry point for training, validating, testing, and predicting with the Image2Latex model.
 
-    This function sets up datasets, data modules, loggers, callbacks, 
+    This function sets up datasets, data modules, loggers, callbacks,
     and the PyTorch Lightning trainer
-    according to the provided configuration. It supports resuming from checkpoints, 
+    according to the provided configuration. It supports resuming from checkpoints,
     overriding checkpoint
-    hyperparameters, and running different stages (train, validate, test, predict) 
+    hyperparameters, and running different stages (train, validate, test, predict)
     as specified in the arguments.
 
     Args:
-        args (DictConfig): Configuration object containing all necessary parameters 
-        for data loading, model initialization, training, validation, testing, prediction, logging, 
+        args (DictConfig): Configuration object containing all necessary parameters
+        for data loading, model initialization, training, validation, testing, prediction, logging,
         and checkpointing.
 
     Workflow:
@@ -190,7 +191,7 @@ def main(args: DictConfig):
     Note:
         - The function expects that all required classes (e.g., Text100k, LatexDataset, DataModule,
           Image2LatexModel)
-          and libraries (e.g., torch, numpy, pytorch_lightning as pl, OmegaConf) 
+          and libraries (e.g., torch, numpy, pytorch_lightning as pl, OmegaConf)
           are properly imported.
         - The function does not return any value; it runs the selected stages as side effects.
     """
@@ -207,21 +208,21 @@ def main(args: DictConfig):
         text = Text170k(args.vocab_file)
 
     train_set = LatexDataset(
-        data_path=args.data_path,
+        data_path=args.data_path_train,
         img_path=args.img_path,
         data_type="train",
         n_sample=args.train_sample,
         dataset=args.dataset,
     )
     val_set = LatexDataset(
-        data_path=args.data_path,
+        data_path=args.data_path_validate,
         img_path=args.img_path,
         data_type="validate",
         n_sample=args.val_sample,
         dataset=args.dataset,
     )
     test_set = LatexDataset(
-        data_path=args.data_path,
+        data_path=args.data_path_test,
         img_path=args.img_path,
         data_type="test",
         n_sample=args.test_sample,

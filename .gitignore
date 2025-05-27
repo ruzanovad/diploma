@@ -18,3 +18,4 @@ cnn-rnn/logs
 latex/
 wandb/
 *.png
+cnn-rnn/outputs

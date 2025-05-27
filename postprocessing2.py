@@ -166,12 +166,11 @@ if __name__ == "__main__":
         h, w = img.shape[:2]
 
         try:
-            txt = np.loadtxt(pred_path).reshape(-1, 5)  # (N, 5)
+            txt = np.loadtxt(pred_path).reshape(-1, 5)
         except Exception as e:
             print(f"Error loading {pred_path}: {e}")
             continue
 
-        # Обработка каждой строки
         boxes = []
         for row in txt:
             class_id, xc, yc, bw, bh = row
@@ -183,14 +182,13 @@ if __name__ == "__main__":
                     "filename": filename,
                     "class_id": class_id,
                     "label": class_map[class_id],
-                    "bbox": bbox,  # [x1, y1, x2, y2]
+                    "bbox": bbox,
                 }
             )
 
         boxes = sorted(boxes, key=lambda x: x["bbox"][0])
-
+        build_relation_graph(boxes)  # <--- Add this line
         texts.append(to_latex(boxes))
-
         all_boxes.append(boxes)
 
     if all_boxes:
