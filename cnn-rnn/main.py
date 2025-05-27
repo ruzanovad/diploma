@@ -272,16 +272,18 @@ def main(args: DictConfig):
 
     # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+    stats_logger = ModelStatsLogger()
+
     trainer = pl.Trainer(
         logger=[tb_logger, wandb_logger],
         #     profiler=AdvancedProfiler(
         #     dirpath="logs/profiler",  # where to save
         #     filename=f"{timestamp}-profile.txt",  # filename
         # ),
-        callbacks=[lr_monitor, checkpoint_callback],
+        callbacks=[lr_monitor, checkpoint_callback, stats_logger],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
-        strategy="auto" if not args.gpu else "ddp_notebook" if args.notebook else "ddp",
+        strategy=args.strategy,
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
@@ -347,6 +349,9 @@ def main(args: DictConfig):
             beam_width=args.beam_width,
             log_step=args.log_step,
             log_text=args.log_text,
+            cnn_channels=args.cnn_channels,
+            nhead=args.nhead,
+            enc_layers=args.enc_layers,
         )
 
     # === TRAIN ===
