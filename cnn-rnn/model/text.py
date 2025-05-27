@@ -87,10 +87,7 @@ class Text100k(Text):
         self.id2word = json.load(open(vocab_file, "r"))
         self.word2id = dict(zip(self.id2word, range(len(self.id2word))))
         self.tokenize_pattern = re.compile(
-            r"(\\\\[a-zA-Z]+)|"
-            + r'((\\\\)*[$-/:-?{-~!"^_`\[\]])|'
-            + r"(\w)|"
-            + r"(\\\\)"
+            "(\\\\[a-zA-Z]+)|" + '((\\\\)*[$-/:-?{-~!"^_`\[\]])|' + "(\w)|" + "(\\\\)"
         )
         self.n_class = len(self.id2word)
 

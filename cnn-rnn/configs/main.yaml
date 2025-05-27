@@ -40,8 +40,8 @@ num_layers: 1
 model_name: "conv_lstm"
 grad_clip: 0
 num_workers: 4
-gpu: false
-notebook: false
+gpu: true
+strategy: "auto"
 rewrite_checkpoint_fitting: false
 checkpoints_path: "checkpoints"
 tb_logs_path: "tb_logs"
