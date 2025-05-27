@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 16
-accumulate_batch: 32
+batch_size: 64
+accumulate_batch: 128
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
@@ -12,12 +12,12 @@ train: true
 val: false
 test: false
 predict: false
-log_text: false
+log_text: true
 
 # Sample Sizes
-train_sample: 5000
-val_sample: 1000
-test_sample: 1000
+train_sample: 75275
+val_sample: 8370
+test_sample: 10355
 
 # Training Hyperparameters
 cnn_channels: 32
@@ -36,10 +36,10 @@ dec_dim: 512
 dropout: 0.1
 decode_type: "beamsearch"
 beam_width: 5
-num_layers: 1
-model_name: "resnet_beamsearch"
+num_layers: 4
+model_name: "image_to_latex"
 grad_clip: 0
-num_workers: 4
+num_workers: 8
 gpu: true
 strategy: "auto"
 rewrite_checkpoint_fitting: false
