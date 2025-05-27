@@ -132,11 +132,16 @@ class ModelStatsLogger(pl.Callback):
             try:
                 with torch.device("meta"):
                     model = pl_module.__class__()  # works only if model has no args
-                    dummy_images = torch.randn(1, 3, 64, 384, device="meta")
-                    dummy_formulas = torch.randint(0, 100, (1, 20), device="meta")
-                    dummy_lengths = torch.tensor([20], device="meta")
+                    img_meta, frm_meta, len_meta = pl_module.example_input_array
 
-                    fwd_fn = lambda: model(dummy_images, dummy_formulas, dummy_lengths)
+                    # Move them to meta
+                    dummy_images_meta = img_meta.to("meta")
+                    dummy_formulas_meta = frm_meta.to("meta")
+                    dummy_lengths_meta = len_meta.to("meta")
+
+                    fwd_fn = lambda: model(
+                        dummy_images_meta, dummy_formulas_meta, dummy_lengths_meta
+                    )
                     flops = measure_flops(model, fwd_fn)
                     gflops = flops / 1e9
             except Exception as e:
@@ -145,9 +150,10 @@ class ModelStatsLogger(pl.Callback):
 
             # Inference speed (on real device)
             device = next(pl_module.parameters()).device
-            dummy_images = torch.randn(1, 3, 64, 384).to(device)
-            dummy_formulas = torch.randint(0, 100, (1, 20)).to(device)
-            dummy_lengths = torch.tensor([20]).to(device)
+            img, frm, ln = pl_module.example_input_array
+            dummy_images = img.to(device)
+            dummy_formulas = frm.to(device)
+            dummy_lengths = ln.to(device)
 
             pl_module.eval()
             with torch.no_grad():

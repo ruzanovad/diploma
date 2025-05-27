@@ -123,16 +123,19 @@ class Image2LatexModel(pl.LightningModule):
             enc_layers=enc_layers,
             cnn_channels=cnn_channels,
         )
-        self.example_input_array = (
-            torch.randn([1, 3, 64, 384]),  # image
-            torch.randint(0, n_class, [1, 20]),  # formula
-            torch.tensor([20]),  # length
-        )
+
         self.criterion = nn.CrossEntropyLoss()
         self.lr = lr
         self.total_steps = total_steps
         self.text = text
         self.max_length = 150
+
+        self.example_input_array = (
+            torch.randn(1, 3, 64, 384),              # images
+            torch.randint(0, self.text.n_class, (1, self.max_length)),  # formulas
+            torch.tensor([self.max_length])              # formula_len
+        )
+
         self.log_step = log_step
         self.log_text = log_text
         self.exact_match = load("exact_match")
