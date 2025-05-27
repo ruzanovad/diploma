@@ -17,3 +17,4 @@ cnn-rnn/logs
 *.pt
 latex/
 wandb/
+*.png
