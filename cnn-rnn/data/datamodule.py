@@ -1,3 +1,19 @@
+"""
+DataModule for im2latex: PyTorch Lightning DataModule for managing data loading and preprocessing.
+
+This module defines the DataModule class, which encapsulates all logic for loading, batching, and
+preprocessing data for the im2latex project. It supports training, validation, testing, and 
+prediction phases, handling both image and formula data. The module includes custom collation 
+to pad images andtokenized formulas to uniform sizes within each batch.
+
+Classes:
+    DataModule: Handles dataset splits, DataLoader creation, and 
+    batch collation for images and formulas.
+
+Typical usage example:
+    dm = DataModule(train_set, val_set, test_set, predict_set, batch_size=32, text=text_encoder)
+    trainer.fit(model, datamodule=dm)
+"""
 from typing import List, Tuple
 import torch
 import lightning.pytorch as pl
@@ -125,12 +141,12 @@ class DataModule(pl.LightningDataModule):
         images = [i[0] for i in batch]
         max_width, max_height = 0, 0
         for img in images:
-            c, h, w = img.size()
+            _, h, w = img.size()
             max_width = max(max_width, w)
             max_height = max(max_height, h)
 
         def padding(img):
-            c, h, w = img.size()
+            _, h, w = img.size()
             padder = tvt.Pad((0, 0, max_width - w, max_height - h))
             return padder(img)
 

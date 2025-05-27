@@ -1,23 +1,23 @@
+"""
+main.py -- entry point of the application
+handles model training/validation/testing/prediction(inference)
+"""
+
 import datetime
 import math
 import os
-import sys
 from datetime import datetime
 from time import time
 
 import numpy as np
-import pandas as pd
 import torch
-from torch import Tensor, nn
-from torch.utils.data import DataLoader
-from torchvision import transforms as tvt
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
 import lightning.pytorch as pl
 from lightning.pytorch.loggers.logger import Logger
-from lightning.pytorch.profilers import AdvancedProfiler
+# from lightning.pytorch.profilers import AdvancedProfiler
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from lightning.fabric.utilities.throughput import measure_flops
 
@@ -29,6 +29,36 @@ from model.text import Text100k, Text170k
 
 
 class FileLogger(Logger):
+    """
+    FileLogger is a custom logger class for logging training,
+    validation, testing, and prediction events to a file.
+
+    Args:
+        train (bool): Whether to log training events.
+        val (bool): Whether to log validation events.
+        test (bool): Whether to log testing events.
+        predict (bool): Whether to log prediction events.
+
+    Attributes:
+        log_path (str): Path to the log file.
+        log_file (file object): File object for the log file.
+
+    Properties:
+        name (str): Returns the name of the logger ("file_logger").
+        version (str): Returns the version of the logger ("1.0").
+
+    Methods:
+        log_hyperparams(params): Logs hyperparameters to the log file.
+        log_metrics(metrics, step): Logs metrics at a given step to the log file.
+        finalize(status): Logs the finalization status to the log file.
+
+    Notes:
+        - Log files are saved in the "logs" directory, with
+        filenames indicating the active modes and a timestamp.
+        - Only the main process (rank zero) performs logging
+        in distributed settings.
+    """
+
     def __init__(self, train: bool, val: bool, test: bool, predict: bool):
         super().__init__()
 
@@ -45,7 +75,6 @@ class FileLogger(Logger):
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         self.log_path = f"logs/{modes}-{timestamp}.log"
-        self.log_file = open(self.log_path, "a")
 
     @property
     def name(self):
@@ -56,30 +85,49 @@ class FileLogger(Logger):
         return "1.0"
 
     @rank_zero_only
-    def log_hyperparams(self, params):
-        with open(self.log_path, "a") as f:
+    def log_hyperparams(self, params, *args, **kwargs):
+        with open(self.log_path, "a", encoding="utf-8") as f:
             print(f"[HYPERPARAMS] {params}", file=f)
 
     @rank_zero_only
-    def log_metrics(self, metrics, step):
-        with open(self.log_path, "a") as f:
+    def log_metrics(self, metrics, step=None, **kwargs):
+        with open(self.log_path, "a", encoding="utf-8") as f:
             print(f"[METRICS] Step {step}: {metrics}", file=f)
 
     @rank_zero_only
     def finalize(self, status):
-        with open(self.log_path, "a") as f:
+        with open(self.log_path, "a", encoding="utf-8") as f:
             print(f"[FINALIZE] {status}", file=f)
 
 
 class ModelStatsLogger(pl.Callback):
+    """
+    A PyTorch Lightning callback that logs model statistics at the start of training.
+
+    Logs the following metrics to the experiment logger (supports WandbLogger):
+    - Total number of model parameters.
+    - Model computational complexity in GFLOPs, estimated using a dummy input on the 'meta' device.
+    - Model inference speed in milliseconds, measured over 100 forward passes.
+
+    Args:
+        trainer (pl.Trainer): The PyTorch Lightning trainer.
+        pl_module (pl.LightningModule): The model being trained.
+
+    Notes:
+        - Only activates if the logger is an instance of WandbLogger.
+        - Assumes the model accepts a single input tensor of shape (1, 3, 224, 224).
+        - Requires a `measure_flops` function to be defined elsewhere.
+        - Uses torch.device("meta") for FLOPs estimation.
+    """
+
     def on_fit_start(self, trainer, pl_module):
         logger = trainer.logger
 
         if isinstance(logger, pl.loggers.wandb.WandbLogger):
-            # 1. Параметры модели
+            # Параметры модели
             total_params = sum(p.numel() for p in pl_module.parameters())
 
-            # 2. FLOPs через meta device
+            # FLOPs через meta device
             with torch.device("meta"):
                 model = pl_module.__class__()
                 dummy_input = torch.randn(1, 3, 224, 224, device="meta")
@@ -87,7 +135,7 @@ class ModelStatsLogger(pl.Callback):
                 flops = measure_flops(model, fwd_fn)
                 gflops = flops / 1e9
 
-            # 3. Скорость инференса (на CPU или GPU, в ms)
+            # Скорость инференса (на CPU или GPU, в ms)
             device = next(pl_module.parameters()).device
             dummy_input = torch.randn(1, 3, 224, 224).to(device)
             pl_module.eval()
@@ -103,7 +151,7 @@ class ModelStatsLogger(pl.Callback):
                 end = time.time()
                 speed_ms = ((end - start) / 100) * 1000  # ms
 
-            # 4. Логгирование
+            # логирование
             logger.experiment.log(
                 {
                     "model/parameters": total_params,
@@ -115,70 +163,38 @@ class ModelStatsLogger(pl.Callback):
 
 @hydra.main(config_path="configs", config_name="main", version_base=None)
 def main(args: DictConfig):
+    """
+    Main entry point for training, validating, testing, and predicting with the Image2Latex model.
+
+    This function sets up datasets, data modules, loggers, callbacks, 
+    and the PyTorch Lightning trainer
+    according to the provided configuration. It supports resuming from checkpoints, 
+    overriding checkpoint
+    hyperparameters, and running different stages (train, validate, test, predict) 
+    as specified in the arguments.
+
+    Args:
+        args (DictConfig): Configuration object containing all necessary parameters 
+        for data loading, model initialization, training, validation, testing, prediction, logging, 
+        and checkpointing.
+
+    Workflow:
+        1. Seeds all relevant random number generators for reproducibility.
+        2. Initializes the appropriate text processor and datasets based on the dataset selection.
+        3. Sets up the data module and loggers (TensorBoard and Weights & Biases).
+        4. Configures callbacks for checkpointing and learning rate monitoring.
+        5. Initializes the PyTorch Lightning Trainer with the specified settings.
+        6. Loads the model from a checkpoint or initializes a new model as required.
+        7. Executes training, validation, testing, and/or prediction based on the flags in args.
+
+    Note:
+        - The function expects that all required classes (e.g., Text100k, LatexDataset, DataModule,
+          Image2LatexModel)
+          and libraries (e.g., torch, numpy, pytorch_lightning as pl, OmegaConf) 
+          are properly imported.
+        - The function does not return any value; it runs the selected stages as side effects.
+    """
     print(OmegaConf.to_yaml(args))
-    # parser = argparse.ArgumentParser(description="training image2latex")
-    # parser.add_argument("--batch-size", type=int, default=16)
-    # parser.add_argument("--accumulate-batch", type=int, default=32)
-    # parser.add_argument("--data-path", type=str, help="data path")
-    # parser.add_argument("--img-path", type=str, help="image folder path")
-    # parser.add_argument(
-    #     "--predict-img-path", type=str, help="image for predict path", default=None
-    # )
-
-    # parser.add_argument(
-    #     "--dataset", type=str, help="choose dataset [100k, 170k]", default="100k"
-    # )
-    # parser.add_argument("--vocab_file", type=str, help="path to vocab file")
-    # parser.add_argument("--train", action="store_true")
-    # parser.add_argument("--val", action="store_true")
-    # # do not use ddp with test
-    # # https://github.com/Lightning-AI/pytorch-lightning/issues/12862
-    # parser.add_argument("--test", action="store_true")
-    # parser.add_argument("--predict", action="store_true")
-    # parser.add_argument("--log-text", action="store_true")
-    # parser.add_argument("--train-sample", type=int, default=5000)
-    # parser.add_argument("--val-sample", type=int, default=1000)
-    # parser.add_argument("--test-sample", type=int, default=1000)
-    # parser.add_argument("--max-epochs", type=int, default=15)
-    # parser.add_argument("--log-step", type=int, default=100)
-    # parser.add_argument("--lr", type=float, default=0.01)
-    # parser.add_argument("--random-state", type=int, default=12)
-    # parser.add_argument("--ckpt-path", type=str, default=None)
-    # parser.add_argument("--enc-type", type=str, default="resnet_encoder")
-    # # conv_row_encoder, conv_encoder, conv_bn_encoder resnet_row_encoder
-
-    # parser.add_argument("--enc-dim", type=int, default=512)
-    # parser.add_argument("--emb-dim", type=int, default=80)
-    # parser.add_argument("--attn-dim", type=int, default=512)
-    # parser.add_argument("--dec-dim", type=int, default=512)
-    # parser.add_argument("--dropout", type=float, default=0.1)
-    # parser.add_argument(
-    #     "--decode-type",
-    #     type=str,
-    #     default="greedy",
-    #     help="Choose between [greedy, beamsearch]",
-    # )
-    # parser.add_argument("--beam-width", type=int, default=5)
-    # parser.add_argument("--num-layers", type=int, default=1)
-    # parser.add_argument("--model-name", type=str, default="conv_lstm")
-    # """
-    # Gradient clipping is a method where the error derivative is changed or clipped
-    # to a threshold during backward propagation through the network, and the clipped
-    # gradients are used to update the weights.
-    # By rescaling the error derivative, the updates to the weights will also be rescaled,
-    # dramatically decreasing the likelihood of an overflow or underflow.
-    # """
-    # parser.add_argument("--grad-clip", type=float, default=0)
-
-    # parser.add_argument("--num-workers", type=int, default=4)
-    # parser.add_argument("--gpu", action="store_true")
-    # parser.add_argument("--notebook", action="store_true")
-    # parser.add_argument("--rewrite-checkpoint-fitting", action="store_true")
-    # # parser.add_argument("--max-time", type=str, default="00:12:00:00")
-    # parser.add_argument("--checkpoints-path", type=str, default="checkpoints")
-    # parser.add_argument("--tb-logs-path", type=str, default="tb_logs")
-
-    # args = parser.parse_args()
 
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
@@ -253,7 +269,7 @@ def main(args: DictConfig):
 
     # logger = FileLogger(args.train, args.val, args.test, args.predict)
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     trainer = pl.Trainer(
         logger=[tb_logger, wandb_logger],

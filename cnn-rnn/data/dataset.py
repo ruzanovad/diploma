@@ -1,16 +1,31 @@
+"""
+Dataset definitions for the im2latex project.
+
+This module provides dataset classes for loading and preprocessing image-formula pairs and 
+prediction images.
+It includes:
+    - LatexDataset: Loads images and corresponding LaTeX formulas from CSV files for training, 
+    validation, and testing.
+    - LatexPredictDataset: Loads images for prediction/inference.
+
+Both datasets handle image normalization and are compatible with PyTorch DataLoader.
+"""
+
+import os
+import math
+
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
 import torch
 import torchvision
 from torchvision import transforms as tvt
-import math
-import os
 
 
-class LatexDataset(Dataset): 
+class LatexDataset(Dataset):
     """
     Dataset class for the im2latex project
     """
+
     def __init__(
         self, data_path, img_path, data_type: str, n_sample: int = None, dataset="100k"
     ):
@@ -22,7 +37,11 @@ class LatexDataset(Dataset):
             df = df.head(n_sample)
         df["image"] = df.image.map(lambda x: img_path + "/" + x)
         self.walker = df.to_dict("records")
-        self.transform = tvt.Compose([tvt.Normalize((0.5), (0.5)),])
+        self.transform = tvt.Compose(
+            [
+                tvt.Normalize((0.5), (0.5)),
+            ]
+        )
 
     def __len__(self):
         return len(self.walker)
@@ -39,6 +58,23 @@ class LatexDataset(Dataset):
 
 
 class LatexPredictDataset(Dataset):
+    """
+    A PyTorch Dataset for predicting LaTeX from a single image.
+
+    Args:
+        predict_img_path (str): Path to the image file to be used for prediction.
+
+    Attributes:
+        walker (list): List containing the image path if provided, otherwise empty.
+        transform (torchvision.transforms.Compose): Transformation pipeline to normalize the image.
+
+    Methods:
+        __len__(): Returns the number of images in the dataset (0 or 1).
+        __getitem__(idx): Loads and returns the normalized image tensor at the given index.
+
+    Raises:
+        AssertionError: If the provided image path does not exist.
+    """
     def __init__(self, predict_img_path: str):
         super().__init__()
         if predict_img_path:
@@ -46,7 +82,11 @@ class LatexPredictDataset(Dataset):
             self.walker = [predict_img_path]
         else:
             self.walker = []
-        self.transform = tvt.Compose([tvt.Normalize((0.5), (0.5)),])
+        self.transform = tvt.Compose(
+            [
+                tvt.Normalize((0.5), (0.5)),
+            ]
+        )
 
     def __len__(self):
         return len(self.walker)

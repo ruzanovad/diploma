@@ -1,3 +1,19 @@
+"""
+Text processing utilities for the im2latex project.
+
+This module defines abstract and concrete classes for tokenizing and encoding LaTeX formulas.
+It provides:
+    - Text: Abstract base class specifying the interface for tokenization and conversion between
+    text and indices.
+    - Text100k: Tokenizer and encoder for vocabularies with ~100k tokens,
+      using LaTeX-aware regex tokenization.
+    - Text170k: Tokenizer and encoder for vocabularies with ~170k tokens,
+    using whitespace tokenization.
+
+These classes support converting formulas to token indices and back,
+for use in model training and inference.
+"""
+
 import json
 import re
 from abc import ABC, abstractmethod
@@ -28,7 +44,6 @@ class Text(ABC):
         Convert a formula string into a list of tokens.
         To be implemented in subclasses.
         """
-        pass
 
     def int2text(self, x: Tensor):
         """
@@ -71,8 +86,11 @@ class Text100k(Text):
         # self.id2word = json.load(open("data/vocab/100k_vocab.json", "r"))
         self.id2word = json.load(open(vocab_file, "r"))
         self.word2id = dict(zip(self.id2word, range(len(self.id2word))))
-        self.TOKENIZE_PATTERN = re.compile(
-            "(\\\\[a-zA-Z]+)|" + '((\\\\)*[$-/:-?{-~!"^_`\[\]])|' + "(\w)|" + "(\\\\)"
+        self.tokenize_pattern = re.compile(
+            r"(\\\\[a-zA-Z]+)|"
+            + r'((\\\\)*[$-/:-?{-~!"^_`\[\]])|'
+            + r"(\w)|"
+            + r"(\\\\)"
         )
         self.n_class = len(self.id2word)
 
@@ -86,7 +104,7 @@ class Text100k(Text):
         Returns:
             List[str]: List of tokens
         """
-        tokens = re.finditer(self.TOKENIZE_PATTERN, formula)
+        tokens = re.finditer(self.tokenize_pattern, formula)
         tokens = list(map(lambda x: x.group(0), tokens))
         tokens = [x for x in tokens if x is not None and x != ""]
         return tokens

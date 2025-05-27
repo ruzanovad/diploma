@@ -1,5 +1,18 @@
+"""
+Defines the Image2LatexModel LightningModule for the im2latex project.
+
+This module implements the PyTorch LightningModule wrapper for the Image2Latex model,
+handling training, validation, testing, and prediction steps. It integrates loss computation,
+optimizer and scheduler configuration, and evaluation metrics such as edit distance, BLEU-4,
+and exact match. The module is designed for end-to-end training and evaluation of the
+image-to-LaTeX sequence model.
+
+Classes:
+    Image2LatexModel: PyTorch LightningModule for training and evaluating the im2latex model.
+"""
+
 import torch
-from torch import Tensor, nn
+from torch import nn
 from torchaudio.functional import edit_distance
 from evaluate import load
 import lightning.pytorch as pl
@@ -10,6 +23,61 @@ from .text import Text
 
 
 class Image2LatexModel(pl.LightningModule):
+    """
+    PyTorch Lightning Module for Image-to-LaTeX Model.
+
+    This module encapsulates the training, validation, testing, and 
+    prediction logic for an image-to-LaTeX sequence model. It leverages 
+    PyTorch Lightning for streamlined training and evaluation, and supports 
+    various encoder/decoder configurations.
+
+    Args:
+        lr (float): Learning rate for the optimizer.
+        total_steps (int): Total number of training steps for learning rate scheduling.
+        n_class (int): Number of output classes (vocabulary size).
+        enc_dim (int, optional): Encoder output dimension. Default is 512.
+        enc_type (str, optional): Encoder type (e.g., "resnet_encoder"). Default 
+        is "resnet_encoder".
+        emb_dim (int, optional): Embedding dimension for tokens. Default is 80.
+        dec_dim (int, optional): Decoder hidden dimension. Default is 512.
+        attn_dim (int, optional): Attention mechanism dimension. Default is 512.
+        num_layers (int, optional): Number of layers in the decoder. Default is 1.
+        dropout (float, optional): Dropout rate. Default is 0.1.
+        bidirectional (bool, optional): If True, use bidirectional encoder. Default is False.
+        decode_type (str, optional): Decoding strategy ("greedy" or "beam"). Default is "greedy".
+        text (Text, optional): Text processing utility for tokenization and detokenization.
+        beam_width (int, optional): Beam width for beam search decoding. Default is 5.
+        sos_id (int, optional): Start-of-sequence token ID. Default is 1.
+        eos_id (int, optional): End-of-sequence token ID. Default is 2.
+        log_step (int, optional): Logging frequency (in steps). Default is 100.
+        log_text (bool, optional): If True, logs sample predictions during validation/testing. 
+        Default is False.
+        nhead (int, optional): Number of attention heads (for transformer-based encoders). 
+        Default is 16.
+        enc_layers (int, optional): Number of encoder layers. Default is 2.
+        cnn_channels (int, optional): Number of channels in CNN encoder. Default is 32.
+
+    Attributes:
+        model (Image2Latex): The underlying image-to-LaTeX model.
+        criterion (nn.CrossEntropyLoss): Loss function for training.
+        lr (float): Learning rate.
+        total_steps (int): Total training steps.
+        text (Text): Text utility for tokenization.
+        max_length (int): Maximum output sequence length for decoding.
+        log_step (int): Logging frequency.
+        log_text (bool): Whether to log text predictions.
+        exact_match: Metric for exact match evaluation.
+        bleu: Metric for BLEU score evaluation.
+
+    Methods:
+        configure_optimizers(): Sets up optimizer and learning rate scheduler.
+        forward(images, formulas, formula_len, *args, **kwargs): Forward pass through the model.
+        training_step(batch, batch_idx, *args, **kwargs): Training step logic.
+        validation_step(batch, batch_idx, *args, **kwargs): Validation step logic, computes metrics.
+        test_step(batch, batch_idx, *args, **kwargs): Test step logic, computes metrics.
+        predict_step(batch, *args, **kwargs): Prediction step for inference.
+
+    """
     def __init__(
         self,
         lr,
@@ -84,10 +152,10 @@ class Image2LatexModel(pl.LightningModule):
         }
         return [optimizer], [scheduler]
 
-    def forward(self, images, formulas, formula_len):
+    def forward(self, images, formulas, formula_len, *args, **kwargs):
         return self.model(images, formulas, formula_len)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, *args, **kwargs):
         if batch_idx % 10 == 0:
             torch.cuda.empty_cache()
 
@@ -108,7 +176,7 @@ class Image2LatexModel(pl.LightningModule):
         return loss
 
     @torch.no_grad
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, *args, **kwargs):
         images, formulas, formula_len = batch
 
         formulas_in = formulas[:, :-1]
@@ -177,7 +245,7 @@ class Image2LatexModel(pl.LightningModule):
         return edit_dist, bleu4, em, loss
 
     @torch.no_grad
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx, *args, **kwargs):
         images, formulas, formula_len = batch
 
         formulas_in = formulas[:, :-1]
@@ -235,7 +303,7 @@ class Image2LatexModel(pl.LightningModule):
         return edit_dist, bleu4, em, loss
 
     @torch.no_grad
-    def predict_step(self, batch, batch_idx):
+    def predict_step(self, batch, *args, **kwargs):
         image = batch
 
         latex = self.model.decode(image, self.max_length)

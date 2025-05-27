@@ -1,3 +1,17 @@
+"""
+Attention mechanism module for the im2latex project.
+
+This module implements the additive (Bahdanau-style) attention mechanism used in 
+sequence-to-sequence models.
+The Attention class computes a context vector as a weighted sum of encoder outputs, 
+where the weights are
+determined by the similarity between the decoder hidden state and each encoder output.
+
+Classes:
+    Attention: Neural network module for additive attention, 
+    supporting context computation for decoder steps.
+"""
+
 import torch
 from torch import nn, Tensor
 
@@ -10,15 +24,16 @@ class Attention(nn.Module):
         enc_dim (int): Dimensionality of encoder outputs (default: 512)
         dec_dim (int): Dimensionality of decoder hidden state (default: 512)
         attn_dim (int): Dimensionality of intermediate attention space (default: 512)
-    
+
     Forward Inputs:
         h (Tensor): Decoder hidden state at current time step, shape (batch_size, dec_dim)
         V (Tensor): Encoder output features, shape (batch_size, seq_len, enc_dim)
-    
+
     Returns:
         context (Tensor): Context vector computed as the weighted sum of encoder features,
                           shape (batch_size, enc_dim)
     """
+
     def __init__(self, enc_dim: int = 512, dec_dim: int = 512, attn_dim: int = 512):
         super().__init__()
 
@@ -53,11 +68,13 @@ class Attention(nn.Module):
 
         # Combine decoder and encoder projections, then apply tanh and final linear layer
         # attn shape: (b, seq_len)
-        attn = self.full_attn(torch.tanh(attn_1.unsqueeze(1) + attn_2)).squeeze(2) # shape: (b, seq_len)
+        attn = self.full_attn(torch.tanh(attn_1.unsqueeze(1) + attn_2)).squeeze(
+            2
+        )  # shape: (b, seq_len)
 
         # Compute attention weights
         alpha = self.softmax(attn)
 
         # Weighted sum of encoder features
-        context = (alpha.unsqueeze(2) * V).sum(dim=1) # shape: (b, enc_dim)
+        context = (alpha.unsqueeze(2) * V).sum(dim=1)  # shape: (b, enc_dim)
         return context

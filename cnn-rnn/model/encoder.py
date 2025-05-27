@@ -1,3 +1,21 @@
+"""
+Encoder modules for the im2latex project.
+
+This module provides several encoder architectures for extracting visual features from images:
+    - ResNetEncoder: Uses a truncated ResNet-18 followed by a linear projection
+    to obtain visual embeddings.
+    - ResNetWithRowEncoder: Extends ResNet with a row-wise bidirectional LSTM
+    to capture sequential patterns.
+    - PositionalEncoding: Implements sinusoidal positional encoding
+    for sequence models.
+    - ConvTransformerEncoder: Combines convolutional feature extraction
+    with a Transformer encoder backend.
+
+These encoders are designed for use in image-to-sequence models,
+supporting flexible feature extraction
+for downstream sequence decoders.
+"""
+
 import torch
 from torch import Tensor, nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
@@ -101,7 +119,7 @@ class ResNetWithRowEncoder(nn.Module):
         features = self.resnet(x)
 
         # Conv 1x1: (B, enc_dim, H′, W′)
-        features = self.fc(features) # (B, enc_dim, H', W')
+        features = self.fc(features)  # (B, enc_dim, H', W')
 
         # Prepare for row-wise LSTM
         # Permute: (B, enc_dim, H′, W′) → (B, H′, W′, enc_dim)
@@ -110,16 +128,16 @@ class ResNetWithRowEncoder(nn.Module):
         B, H, W, C = features.shape
 
         # Flatten batch and rows into sequence batch
-        features = features.reshape(B * H, W, C) # (B * H', W', enc_dim)
+        features = features.reshape(B * H, W, C)  # (B * H', W', enc_dim)
 
         # Apply BiLSTM across each row (horizontally)
-        features, _ = self.row_encoder(features) # (B * H', W', enc_dim)
+        features, _ = self.row_encoder(features)  # (B * H', W', enc_dim)
 
         # Reshape back to (B, H', W', enc_dim)
         features = features.view(B, H, W, C)
 
         # Flatten spatial dimensions for output
-        features = features.reshape(B, -1, C) # (B, H'*W', enc_dim)
+        features = features.reshape(B, -1, C)  # (B, H'*W', enc_dim)
 
         return features
 
@@ -158,7 +176,6 @@ class PositionalEncoding(nn.Module):
         """
         x = x + self.pe[:, : x.size(1)]
         return x
-
 
 
 class ConvTransformerEncoder(nn.Module):
