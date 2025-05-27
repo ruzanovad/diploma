@@ -23,15 +23,15 @@ class Image2Latex(nn.Module):
     """
     Image2Latex model for converting images to LaTeX sequences.
 
-    This class implements an encoder-decoder architecture for the image-to-LaTeX task, 
+    This class implements an encoder-decoder architecture for the image-to-LaTeX task,
     supporting multiple encoder types
-    (e.g., ResNet, Transformer) and decoding strategies (greedy and beam search). 
+    (e.g., ResNet, Transformer) and decoding strategies (greedy and beam search).
     The model takes an input image, encodes it
     into a feature representation, and decodes it into a sequence of LaTeX tokens.
 
         enc_layers (int, optional): Number of layers in the encoder (for transformer). Default is 2.
         nhead (int, optional): Number of attention heads (for transformer encoder). Default is 16.
-        decode_type (str, optional): Decoding strategy, either "greedy" or "beamsearch". 
+        decode_type (str, optional): Decoding strategy, either "greedy" or "beamsearch".
         Default is "greedy".
 
 
@@ -40,7 +40,7 @@ class Image2Latex(nn.Module):
             Initializes the decoder's hidden state (h, c) from the encoder output.
 
         forward(x, y, y_len):
-            Performs a forward pass through the model for training, returning predictions 
+            Performs a forward pass through the model for training, returning predictions
             for each timestep.
 
         decode(x, max_length=150):
@@ -181,7 +181,7 @@ class Image2Latex(nn.Module):
             y_len (Tensor): Tensor containing the lengths of each target sequence in the batch.
 
         Returns:
-            Tensor: Predicted output sequences for each timestep, shape 
+            Tensor: Predicted output sequences for each timestep, shape
             (batch_size, sequence_length, output_dim).
         """
         encoder_out = self.encoder(x)
@@ -200,7 +200,7 @@ class Image2Latex(nn.Module):
 
     def decode(self, x: Tensor, max_length: int = 150):
         """
-        Decodes the given input tensor into a sequence of tokens using 
+        Decodes the given input tensor into a sequence of tokens using
         the specified decoding strategy.
 
         Args:
@@ -233,11 +233,14 @@ class Image2Latex(nn.Module):
             List[int]: List of predicted token indices representing the decoded sequence.
         """
         encoder_out = self.encoder(x)
-        bs = encoder_out.size(0)
+        device = encoder_out.device  # <- get the correct device
 
+        bs = encoder_out.size(0)
         hidden_state = self.init_decoder_hidden_state(encoder_out)
 
-        y = torch.LongTensor([self.decoder.sos_id]).view(bs, -1)
+        y = (
+            torch.LongTensor([self.decoder.sos_id]).view(bs, -1).to(device)
+        )  # <- move to same device
 
         predictions = []
         for _ in range(max_length):
@@ -247,7 +250,9 @@ class Image2Latex(nn.Module):
 
             predictions.append(k)
 
-            y = torch.LongTensor([k]).view(bs, -1)
+            y = (
+                torch.LongTensor([k]).view(bs, -1).to(device)
+            )  # <- also move to same device
         return predictions
 
     def decode_beam_search(self, x: Tensor, max_length: int = 150):
@@ -263,9 +268,9 @@ class Image2Latex(nn.Module):
 
         Notes:
             - Assumes batch size of 1.
-            - Uses the model's predefined beam width 
+            - Uses the model's predefined beam width
             (`self.beam_width`).
-            - The sequence starts with the decoder's start-of-sequence token 
+            - The sequence starts with the decoder's start-of-sequence token
             (`self.decoder.sos_id`).
         """
 

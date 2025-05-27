@@ -23,10 +23,10 @@ test_sample: 1000
 cnn_channels: 32
 enc_layers: 2
 nhead: 16 
-max_epochs: 15
+max_epochs: 30
 log_step: 100
 lr: 0.01
-random_state: 12
+random_state: 42
 ckpt_path: null
 enc_type: "resnet_encoder"
 enc_dim: 512
@@ -34,10 +34,10 @@ emb_dim: 80
 attn_dim: 512
 dec_dim: 512
 dropout: 0.1
-decode_type: "greedy"
+decode_type: "beamsearch"
 beam_width: 5
 num_layers: 1
-model_name: "conv_lstm"
+model_name: "resnet_beamsearch"
 grad_clip: 0
 num_workers: 4
 gpu: true
