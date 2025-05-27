@@ -245,8 +245,13 @@ class ConvTransformerEncoder(nn.Module):
 
     def forward(self, x):
         """
-        x: (B, 1, Freq, Time) — typically mel-spectrogram
-        Output: (B, Seq_len, enc_dim)
+        Processes an input tensor through a CNN, applies positional encoding, and passes the result through a transformer encoder.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (B, 1, Freq, Time), typically a mel-spectrogram.
+
+        Returns:
+            torch.Tensor: Output tensor of shape (B, Seq_len, enc_dim), where Seq_len is the sequence length after CNN and pooling, and enc_dim is the encoder dimension.
         """
         x = self.cnn(x)  # (B, enc_dim, F', T')
         x = x.mean(dim=2)  # Average over frequency → (B, enc_dim, T')
