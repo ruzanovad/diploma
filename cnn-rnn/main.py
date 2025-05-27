@@ -21,7 +21,7 @@ from lightning.pytorch.loggers.logger import Logger
 # from lightning.pytorch.profilers import AdvancedProfiler
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from lightning.fabric.utilities.throughput import measure_flops
-
+from lightning.pytorch.callbacks import ModelSummary
 
 from data.datamodule import DataModule
 from data.dataset import LatexDataset, LatexPredictDataset
@@ -128,31 +128,43 @@ class ModelStatsLogger(pl.Callback):
             # Параметры модели
             total_params = sum(p.numel() for p in pl_module.parameters())
 
-            # FLOPs через meta device
-            with torch.device("meta"):
-                model = pl_module.__class__()
-                dummy_input = torch.randn(1, 3, 224, 224, device="meta")
-                fwd_fn = lambda: model(dummy_input)
-                flops = measure_flops(model, fwd_fn)
-                gflops = flops / 1e9
+            # FLOPs on meta device
+            try:
+                with torch.device("meta"):
+                    model = pl_module.__class__()  # works only if model has no args
+                    dummy_images = torch.randn(1, 3, 64, 384, device="meta")
+                    dummy_formulas = torch.randint(0, 100, (1, 20), device="meta")
+                    dummy_lengths = torch.tensor([20], device="meta")
 
-            # Скорость инференса (на CPU или GPU, в ms)
+                    fwd_fn = lambda: model(dummy_images, dummy_formulas, dummy_lengths)
+                    flops = measure_flops(model, fwd_fn)
+                    gflops = flops / 1e9
+            except Exception as e:
+                print(f"[Warning] FLOPs estimation failed: {e}")
+                gflops = 0
+
+            # Inference speed (on real device)
             device = next(pl_module.parameters()).device
-            dummy_input = torch.randn(1, 3, 224, 224).to(device)
+            dummy_images = torch.randn(1, 3, 64, 384).to(device)
+            dummy_formulas = torch.randint(0, 100, (1, 20)).to(device)
+            dummy_lengths = torch.tensor([20]).to(device)
+
             pl_module.eval()
             with torch.no_grad():
                 # Warmup
                 for _ in range(10):
-                    _ = pl_module(dummy_input)
+                    _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
 
                 # Measure
+                import time
+
                 start = time.time()
                 for _ in range(100):
-                    _ = pl_module(dummy_input)
+                    _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
                 end = time.time()
-                speed_ms = ((end - start) / 100) * 1000  # ms
+                speed_ms = ((end - start) / 100) * 1000  # ms per forward
 
-            # логирование
+            # Logging
             logger.experiment.log(
                 {
                     "model/parameters": total_params,
@@ -280,14 +292,14 @@ def main(args: DictConfig):
         #     dirpath="logs/profiler",  # where to save
         #     filename=f"{timestamp}-profile.txt",  # filename
         # ),
-        callbacks=[lr_monitor, checkpoint_callback, stats_logger],
+        callbacks=[lr_monitor, checkpoint_callback, stats_logger, ModelSummary(2)],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
         strategy=args.strategy,
         log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
-        devices=-1 if args.gpu else 1,
+        devices=args.devices,
         num_sanity_val_steps=1,
         # max_time=args.max_time,
     )
