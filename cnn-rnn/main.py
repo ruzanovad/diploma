@@ -208,21 +208,21 @@ def main(args: DictConfig):
         text = Text170k(args.vocab_file)
 
     train_set = LatexDataset(
-        data_path=args.data_path_train,
+        data_path=args.data_path,
         img_path=args.img_path,
         data_type="train",
         n_sample=args.train_sample,
         dataset=args.dataset,
     )
     val_set = LatexDataset(
-        data_path=args.data_path_validate,
+        data_path=args.data_path,
         img_path=args.img_path,
         data_type="validate",
         n_sample=args.val_sample,
         dataset=args.dataset,
     )
     test_set = LatexDataset(
-        data_path=args.data_path_test,
+        data_path=args.data_path,
         img_path=args.img_path,
         data_type="test",
         n_sample=args.test_sample,
