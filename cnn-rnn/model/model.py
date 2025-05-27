@@ -26,9 +26,9 @@ class Image2LatexModel(pl.LightningModule):
     """
     PyTorch Lightning Module for Image-to-LaTeX Model.
 
-    This module encapsulates the training, validation, testing, and 
-    prediction logic for an image-to-LaTeX sequence model. It leverages 
-    PyTorch Lightning for streamlined training and evaluation, and supports 
+    This module encapsulates the training, validation, testing, and
+    prediction logic for an image-to-LaTeX sequence model. It leverages
+    PyTorch Lightning for streamlined training and evaluation, and supports
     various encoder/decoder configurations.
 
     Args:
@@ -36,7 +36,7 @@ class Image2LatexModel(pl.LightningModule):
         total_steps (int): Total number of training steps for learning rate scheduling.
         n_class (int): Number of output classes (vocabulary size).
         enc_dim (int, optional): Encoder output dimension. Default is 512.
-        enc_type (str, optional): Encoder type (e.g., "resnet_encoder"). Default 
+        enc_type (str, optional): Encoder type (e.g., "resnet_encoder"). Default
         is "resnet_encoder".
         emb_dim (int, optional): Embedding dimension for tokens. Default is 80.
         dec_dim (int, optional): Decoder hidden dimension. Default is 512.
@@ -50,9 +50,9 @@ class Image2LatexModel(pl.LightningModule):
         sos_id (int, optional): Start-of-sequence token ID. Default is 1.
         eos_id (int, optional): End-of-sequence token ID. Default is 2.
         log_step (int, optional): Logging frequency (in steps). Default is 100.
-        log_text (bool, optional): If True, logs sample predictions during validation/testing. 
+        log_text (bool, optional): If True, logs sample predictions during validation/testing.
         Default is False.
-        nhead (int, optional): Number of attention heads (for transformer-based encoders). 
+        nhead (int, optional): Number of attention heads (for transformer-based encoders).
         Default is 16.
         enc_layers (int, optional): Number of encoder layers. Default is 2.
         cnn_channels (int, optional): Number of channels in CNN encoder. Default is 32.
@@ -78,6 +78,7 @@ class Image2LatexModel(pl.LightningModule):
         predict_step(batch, *args, **kwargs): Prediction step for inference.
 
     """
+
     def __init__(
         self,
         lr,
@@ -202,6 +203,15 @@ class Image2LatexModel(pl.LightningModule):
             )
         )
 
+        edit_dist_norm = torch.mean(
+            torch.Tensor(
+                [
+                    edit_distance(tru, pre) / (1e-5 + max(len(pre), len(tru)))
+                    for pre, tru in zip(predicts, truths)
+                ]
+            )
+        )
+
         def safe_bleu(pre, tru):
             if not len(pre) or not len(tru):  # Если какая-то строка пустая
                 return 0.0
@@ -238,11 +248,12 @@ class Image2LatexModel(pl.LightningModule):
             rank_zero_info("=" * 20)
 
         self.log("val_loss", loss, sync_dist=True)
+        self.log("val_edit_distance_norm", edit_dist_norm, sync_dist=True)
         self.log("val_edit_distance", edit_dist, sync_dist=True)
         self.log("val_bleu4", bleu4, sync_dist=True)
         self.log("val_exact_match", em, sync_dist=True)
 
-        return edit_dist, bleu4, em, loss
+        return loss, edit_dist_norm, edit_dist, bleu4, em
 
     @torch.no_grad
     def test_step(self, batch, batch_idx, *args, **kwargs):
@@ -265,11 +276,20 @@ class Image2LatexModel(pl.LightningModule):
         ]
         truths = [self.text.tokenize(self.text.int2text(i)) for i in formulas]
 
-        edit_dists = [
-            edit_distance(tru, pre) / len(tru) if len(tru) > 0 else 0.0
-            for pre, tru in zip(predicts, truths)
-        ]
-        edit_dist = torch.tensor(edit_dists).mean()
+        edit_dist = torch.mean(
+            torch.Tensor(
+                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)]
+            )
+        )
+
+        edit_dist_norm = torch.mean(
+            torch.Tensor(
+                [
+                    edit_distance(tru, pre) / (1e-5 + max(len(pre), len(tru)))
+                    for pre, tru in zip(predicts, truths)
+                ]
+            )
+        )
 
         def safe_bleu(pre, tru):
             if not len(pre) or not len(tru):  # Если какая-то строка пустая
@@ -297,10 +317,11 @@ class Image2LatexModel(pl.LightningModule):
 
         self.log("test_loss", loss, sync_dist=True)
         self.log("test_edit_distance", edit_dist, sync_dist=True)
+        self.log("test_edit_distance_norm", edit_dist_norm, sync_dist=True)
         self.log("test_bleu4", bleu4, sync_dist=True)
         self.log("test_exact_match", em, sync_dist=True)
 
-        return edit_dist, bleu4, em, loss
+        return loss, edit_dist, edit_dist_norm, bleu4, em
 
     @torch.no_grad
     def predict_step(self, batch, *args, **kwargs):
