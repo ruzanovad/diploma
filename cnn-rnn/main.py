@@ -398,5 +398,5 @@ def main(args: DictConfig):
 
 if __name__ == "__main__":
     # because of linux `fork` method
-    torch.multiprocessing.set_start_method("spawn", force=True)
+    # torch.multiprocessing.set_start_method("spawn", force=True)
     main()
