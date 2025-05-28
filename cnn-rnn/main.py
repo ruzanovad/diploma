@@ -171,13 +171,26 @@ class ModelStatsLogger(pl.Callback):
                 speed_ms = ((end - start) / 100) * 1000  # ms per forward
 
             # Logging
-            logger.experiment.log(
-                {
-                    "model/parameters": total_params,
-                    "model/GFLOPs": gflops,
-                    "model/speed_PyTorch(ms)": speed_ms,
-                }
-            )
+            metrics = {
+                "model/parameters": total_params,
+                "model/GFLOPs":    gflops,
+                "model/speed_ms":  speed_ms,
+            }
+             # log to every logger attached to the trainer
+            for lg in trainer.loggers:
+                if isinstance(lg, pl.loggers.wandb.WandbLogger):
+                    # for WandB, push via `experiment`
+                    lg.experiment.log(metrics)
+                elif isinstance(lg, pl.loggers.wandb.LightningLoggerBase):
+                    # generic Lightning logger API
+                    lg.log_metrics(metrics, step=trainer.global_step)
+                else:
+                    # fallback: try a `.log()` method if it exists
+                    if hasattr(lg, "log"):
+                        try:
+                            lg.log(metrics)
+                        except Exception:
+                            pass
 
 
 @hydra.main(config_path="configs", config_name="main", version_base=None)
