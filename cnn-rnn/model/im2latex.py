@@ -199,9 +199,10 @@ class Image2Latex(nn.Module):
         hidden_state = self.init_decoder_hidden_state(encoder_out)
 
         predictions = []
-        y_lenmax = y_len.max()
-        for t in range(y_lenmax):
-            dec_input = y[:, t].unsqueeze(1)
+        # Original y_len is the number of real tokens; +1 to account for the SOS in y
+        T = y.size(1)                       # exact number of time‐steps in y
+        for t in range(T):                  # t = 0 .. T-1
+            dec_input = y[:, t : t + 1]     # shape (B,1), safe slice
             out, hidden_state = self.decoder(dec_input, encoder_out, hidden_state)
             predictions.append(out.squeeze(1))
 

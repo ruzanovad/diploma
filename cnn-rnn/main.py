@@ -196,9 +196,6 @@ def main(args: DictConfig):
     """
     print(OmegaConf.to_yaml(args))
 
-    # because of linux `fork` method
-    torch.multiprocessing.set_start_method("spawn", force=True)
-
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
     pl.seed_everything(args.random_state)
@@ -375,6 +372,7 @@ def main(args: DictConfig):
 
     # === TRAIN ===
     if args.train:
+        
         print("=" * 10 + "[Train]" + "=" * 10)
         trainer.fit(
             datamodule=dm,
@@ -399,4 +397,6 @@ def main(args: DictConfig):
 
 
 if __name__ == "__main__":
+    # because of linux `fork` method
+    torch.multiprocessing.set_start_method("spawn", force=True)
     main()
