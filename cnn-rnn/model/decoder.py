@@ -125,6 +125,10 @@ class Decoder(nn.Module):
         """
         # unpack the multi-layer state
         h_all, c_all = hidden_state  # (L, B, D)
+
+        h_all = h_all.contiguous()
+        c_all = c_all.contiguous()
+
         # pick only the top layer for attention
         h_top = h_all[-1]  # (B, D)
 
