@@ -146,8 +146,8 @@ class Image2Latex(nn.Module):
             sos_id=sos_id,
             eos_id=eos_id,
         )
-        self.init_h = nn.Linear(enc_dim, dec_dim)
-        self.init_c = nn.Linear(enc_dim, dec_dim)
+        self.init_h = nn.Linear(enc_dim, dec_dim * num_layers)
+        self.init_c = nn.Linear(enc_dim, dec_dim * num_layers)
         assert decode_type in ["greedy", "beamsearch"]
         self.decode_type = decode_type
         self.text = text
@@ -166,10 +166,20 @@ class Image2Latex(nn.Module):
             cell state (c) for the decoder,
             both with shape (batch_size, hidden_dim).
         """
-        encoder_mean = V.mean(dim=1)
-        h = torch.tanh(self.init_h(encoder_mean))
-        c = torch.tanh(self.init_c(encoder_mean))
-        return h, c
+        bs = V.size(0)
+        encoder_mean = V.mean(dim=1)  # (bs, enc_dim)
+
+        # project to (bs, dec_dim * n_layers)
+        h_flat = torch.tanh(self.init_h(encoder_mean))
+        c_flat = torch.tanh(self.init_c(encoder_mean))
+
+        # reshape into (n_layers, bs, dec_dim)
+        # it is needed for decoder lstm with multiple layers (expects hidden state of shape
+        # (num_layers, batch_size, dec_dim))
+        h0 = h_flat.view(bs, self.num_layers, -1).transpose(0, 1)
+        c0 = c_flat.view(bs, self.num_layers, -1).transpose(0, 1)
+
+        return h0, c0
 
     def forward(self, x: Tensor, y: Tensor, y_len: Tensor):
         """

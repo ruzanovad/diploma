@@ -298,7 +298,7 @@ def main(args: DictConfig):
         #     dirpath="logs/profiler",  # where to save
         #     filename=f"{timestamp}-profile.txt",  # filename
         # ),
-        callbacks=[lr_monitor, checkpoint_callback, stats_logger, ModelSummary(2)],
+        callbacks=[lr_monitor, checkpoint_callback, stats_logger, ModelSummary(3)],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
         strategy=args.strategy,

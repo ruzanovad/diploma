@@ -123,18 +123,29 @@ class Decoder(nn.Module):
             h: (bs, dec_dim)
             V: (bs, enc_dim, w, h)
         """
-        h, c = hidden_state
-        embed = self.embedding(y)
-        attn_context = self.attention(h, encoder_out)
+        # unpack the multi-layer state
+        h_all, c_all = hidden_state  # (L, B, D)
+        # pick only the top layer for attention
+        h_top = h_all[-1]  # (B, D)
 
-        # rnn_input = embed[:, -1]
-        rnn_input = torch.cat([embed[:, -1], attn_context], dim=1)
-        rnn_input = self.concat(rnn_input)
+        # embed only once per time-step, then pick the last token
+        emb = self.embedding(y)  # (B, T, E)
+        last_emb = emb[:, -1]  # (B, E)
 
-        rnn_input = rnn_input.unsqueeze(1)
-        hidden_state = h.unsqueeze(0), c.unsqueeze(0)
-        out, hidden_state = self.rnn(rnn_input, hidden_state)
-        # out = self.layernorm(out)
-        out = self.logsoftmax(self.out(out))
-        h, c = hidden_state
-        return out, (h.squeeze(0), c.squeeze(0))
+        # compute attention using h_top
+        ctx = self.attention(h_top, encoder_out)  # (B, enc_dim)
+
+        # build the single-step RNN input
+        rnn_in = torch.cat([last_emb, ctx], dim=1)  # (B, E+enc_dim)
+        rnn_in = self.concat(rnn_in)  # (B, dec_dim)
+        rnn_in = rnn_in.unsqueeze(1)  # (B, 1, dec_dim)
+
+        # run one step of the decoder LSTM
+        out_seq, (h_n_all, c_n_all) = self.rnn(rnn_in, (h_all, c_all))
+        # out_seq: (B, 1, dec_dim)
+
+        # project to vocab and normalize
+        logits = self.out(out_seq)  # (B, 1, vocab_size)
+        logp = self.logsoftmax(logits)  # (B, 1, vocab_size)
+
+        return logp, (h_n_all, c_n_all)
