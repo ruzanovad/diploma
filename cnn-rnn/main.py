@@ -7,7 +7,6 @@ import datetime
 import math
 import os
 from datetime import datetime
-from time import time
 
 import numpy as np
 import torch
@@ -101,83 +100,65 @@ class FileLogger(Logger):
             print(f"[FINALIZE] {status}", file=f)
 
 
-class ModelStatsLogger(pl.Callback):
-    """
-    A PyTorch Lightning callback that logs model statistics at the start of training.
+def profile_model(model: pl.LightningModule, logger=None):
+    """Log FLOPs, parameter count, and speed using dummy inputs."""
+    try:
+        if hasattr(model, "clone_for_stats"):
+            prof_model = model.clone_for_stats().to("cpu")
+        else:
+            prof_model = model.to("cpu")
 
-    Logs the following metrics to the experiment logger (supports WandbLogger):
-    - Total number of model parameters.
-    - Model computational complexity in GFLOPs, estimated using a dummy input on the 'meta' device.
-    - Model inference speed in milliseconds, measured over 100 forward passes.
+        # Dummy input
+        img, frm, ln = model.example_input_array
+        img = img.to("cpu")
+        frm = frm.to("cpu")
+        ln = ln.to("cpu")
 
-    Args:
-        trainer (pl.Trainer): The PyTorch Lightning trainer.
-        pl_module (pl.LightningModule): The model being trained.
+        # Parameters
+        total_params = sum(p.numel() for p in prof_model.parameters())
 
-    Notes:
-        - Only activates if the logger is an instance of WandbLogger.
-        - Assumes the model accepts a single input tensor of shape (1, 3, 224, 224).
-        - Requires a `measure_flops` function to be defined elsewhere.
-        - Uses torch.device("meta") for FLOPs estimation.
-    """
+        # FLOPs (replace this with ptflops or torch.fx if needed)
+        flops = measure_flops(
+            prof_model, lambda: prof_model(img, frm, ln)
+        )  # must define this
+        gflops = flops / 1e9
 
-    def on_train_start(self, trainer, pl_module):
-        # Параметры модели
-        total_params = sum(p.numel() for p in pl_module.parameters())
-
-        # FLOPs on meta device
-        try:
-            model = pl_module.clone_for_stats().to("meta")  # beware of constructor args!
-            model.to("meta")
-
-            img_meta, frm_meta, len_meta = pl_module.example_input_array
-            dummy_images_meta = img_meta.to("meta")
-            dummy_formulas_meta = frm_meta.to("meta")
-            dummy_lengths_meta = len_meta.to("meta")
-
-            fwd_fn = lambda: model(dummy_images_meta, dummy_formulas_meta, dummy_lengths_meta)
-            flops = measure_flops(model, fwd_fn)
-            gflops = flops / 1e9
-        except Exception as e:
-            print(f"[Warning] FLOPs estimation failed: {e}")
-            gflops = 0
-
-        # Inference speed (on real device)
-        device = next(pl_module.parameters()).device
-        img, frm, ln = pl_module.example_input_array
-        dummy_images = img.to(device)
-        dummy_formulas = frm.to(device)
-        dummy_lengths = ln.to(device)
-
-        pl_module.eval()
+        # Inference speed
+        prof_model.eval()
         with torch.no_grad():
-            # Warmup
             for _ in range(10):
-                _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
+                _ = prof_model(img, frm, ln)
+            import time
 
-            # Measure
-
-            start = time()
+            start = time.time()
             for _ in range(100):
-                _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
-            end = time()
-            speed_ms = ((end - start) / 100) * 1000  # ms per forward
-        pl_module.train()
+                _ = prof_model(img, frm, ln)
+            end = time.time()
+            speed_ms = ((end - start) / 100) * 1000
 
-        # Logging
         metrics = {
             "model/parameters": total_params,
-            "model/GFLOPs":    gflops,
-            "model/speed_ms": speed_ms,
+            "model/GFLOPs": gflops,
+            "model/speed_PyTorch(ms)": speed_ms,
         }
-        # log to every logger attached to the trainer
-        for lg in trainer.loggers:
-            if isinstance(lg, pl.loggers.wandb.WandbLogger):
-                # for WandB, push via `experiment`
-                lg.experiment.log(metrics)
-            elif isinstance(lg, pl.loggers.logger.Logger):
-                # generic Lightning logger API
-                lg.log_metrics(metrics, step=trainer.global_step)
+
+        # Optional: print
+        print("\n📊 Model Stats:")
+        for k, v in metrics.items():
+            print(f"{k}: {v}")
+
+        # Optional: log to trainer's logger
+        if logger is not None:
+            if hasattr(logger, "log_metrics"):
+                logger.log_metrics(metrics)
+            elif hasattr(logger, "experiment") and hasattr(logger.experiment, "log"):
+                logger.experiment.log(metrics)
+
+        return metrics
+
+    except Exception as e:
+        print(f"[Warning] Profiling failed: {e}")
+        return {}
 
 
 @hydra.main(config_path="configs", config_name="main", version_base=None)
@@ -214,6 +195,9 @@ def main(args: DictConfig):
         - The function does not return any value; it runs the selected stages as side effects.
     """
     print(OmegaConf.to_yaml(args))
+
+    # because of linux `fork` method
+    torch.multiprocessing.set_start_method("spawn", force=True)
 
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
@@ -255,6 +239,11 @@ def main(args: DictConfig):
     effective_steps_per_epoch = steps_per_epoch // accumulate_grad_batches
     total_steps = effective_steps_per_epoch * args.max_epochs
 
+    text2int_fn = text.text2int
+    word2id = text.word2id
+    sos_id = text.sos_id
+    eos_id = text.eos_id
+
     dm = DataModule(
         train_set=train_set,
         val_set=val_set,
@@ -262,7 +251,10 @@ def main(args: DictConfig):
         predict_set=predict_set,
         num_workers=args.num_workers,
         batch_size=args.batch_size,
-        text=text,
+        text2int_fn=text2int_fn,
+        word2id=word2id,
+        sos_id=sos_id,
+        eos_id=eos_id,
     )
 
     tb_logger = pl.loggers.tensorboard.TensorBoardLogger(
@@ -301,7 +293,6 @@ def main(args: DictConfig):
         callbacks=[
             lr_monitor,
             checkpoint_callback,
-            ModelStatsLogger(),
             ModelSummary(3),
         ],
         max_epochs=args.max_epochs,
@@ -344,6 +335,9 @@ def main(args: DictConfig):
                 nhead=args.nhead,
                 enc_layers=args.enc_layers,
             )
+
+            profile_model(model, logger=wandb_logger)
+
             # Загружаем только веса
             state_dict = torch.load(ckpt_path, map_location="cpu")["state_dict"]
             model.load_state_dict(state_dict)
@@ -376,6 +370,8 @@ def main(args: DictConfig):
             nhead=args.nhead,
             enc_layers=args.enc_layers,
         )
+
+        profile_model(model, logger=wandb_logger)
 
     # === TRAIN ===
     if args.train:

@@ -47,9 +47,12 @@ class DataModule(pl.LightningDataModule):
         val_set,
         test_set,
         predict_set,
+        text2int_fn,  # just a function
+        word2id: dict,  # plain dict
+        sos_id: int,
+        eos_id: int,
         num_workers: int = 4,
         batch_size=20,
-        text=None,
     ):
         super().__init__()
         self.train_set = train_set
@@ -57,9 +60,14 @@ class DataModule(pl.LightningDataModule):
         self.test_set = test_set
         self.predict_set = predict_set
         self.batch_size = batch_size
-        self.text = text
+        self.text2int_fn = text2int_fn
+        self.word2id = word2id
+        self.sos_id = sos_id
+        self.eos_id = eos_id
         self.num_workers = num_workers
-        self.persistent_workers = False
+        self.persistent_workers = num_workers > 0
+        # pin_memory only if GPU will be used
+        self.pin_memory = torch.cuda.is_available()
 
     def train_dataloader(self):
         """
@@ -70,7 +78,7 @@ class DataModule(pl.LightningDataModule):
             shuffle=True,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
-            pin_memory=True,
+            pin_memory=self.pin_memory,
             drop_last=True,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
@@ -85,7 +93,7 @@ class DataModule(pl.LightningDataModule):
             shuffle=False,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
-            pin_memory=True,
+            pin_memory=self.pin_memory,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
         )
@@ -99,7 +107,7 @@ class DataModule(pl.LightningDataModule):
             shuffle=False,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
-            pin_memory=True,
+            pin_memory=self.pin_memory,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
         )
@@ -133,26 +141,27 @@ class DataModule(pl.LightningDataModule):
             formula_len (Tensor): Lengths of original formulas (before padding), shape (B,).
         """
         size = len(batch)
-        formulas = [self.text.text2int(i[1]) for i in batch]
-        formula_len = torch.LongTensor([i.size(-1) + 1 for i in formulas])
-        formulas = pad_sequence(formulas, batch_first=True)
 
-        sos = torch.full((size, 1), self.text.word2id["<s>"], dtype=torch.long)
-        eos = torch.full((size, 1), self.text.word2id["<e>"], dtype=torch.long)
+        # 1) token sequence → LongTensor
+        formulas = [self.text2int_fn(formula) for _, formula in batch]
+        formula_lengths = torch.LongTensor([f.size(0) for f in formulas])
+        formulas_padded = pad_sequence(formulas, batch_first=True)
 
-        formulas = torch.cat((sos, formulas, eos), dim=-1).to(dtype=torch.long)
+        # prepend SOS, append EOS
+        sos = torch.full((size, 1), self.sos_id, dtype=torch.long)
+        eos = torch.full((size, 1), self.eos_id, dtype=torch.long)
+        formulas = torch.cat((sos, formulas_padded, eos), dim=1)
 
-        images = [i[0] for i in batch]
-        max_width, max_height = 0, 0
-        for img in images:
-            _, h, w = img.size()
-            max_width = max(max_width, w)
-            max_height = max(max_height, h)
+        # 2) image padding
+        images = [img for img, _ in batch]
+        max_h = max(img.size(1) for img in images)
+        max_w = max(img.size(2) for img in images)
 
-        def padding(img):
-            _, h, w = img.size()
-            padder = tvt.Pad((0, 0, max_width - w, max_height - h))
-            return padder(img)
+        def pad_img(img):
+            c, h, w = img.size()
+            pad = tvt.Pad((0, 0, max_w - w, max_h - h))
+            return pad(img)
 
-        images = torch.stack(list(map(padding, images))).to(dtype=torch.float)
-        return images, formulas, formula_len
+        images = torch.stack([pad_img(img) for img in images]).float()
+
+        return images, formulas, formula_lengths

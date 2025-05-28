@@ -39,7 +39,7 @@ beam_width: 5
 num_layers: 4
 model_name: "image_to_latex"
 grad_clip: 0.5
-num_workers: 0
+num_workers: 8
 gpu: true
 devices: 1
 strategy: "auto"
