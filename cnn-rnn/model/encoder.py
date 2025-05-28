@@ -92,6 +92,7 @@ class ResNetWithRowEncoder(nn.Module):
         # Преобразуем каналы из 512 → enc_dim
         self.fc = nn.Conv2d(512, enc_dim, kernel_size=1)
 
+        self.enc_dim = enc_dim
         # BiLSTM по строкам (ширина — как временная ось)
         self.row_encoder = nn.LSTM(
             input_size=enc_dim,
