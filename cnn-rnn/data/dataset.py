@@ -94,9 +94,11 @@ class LatexPredictDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.walker[idx]
 
-        image = torchvision.io.read_image(img_path)
+        image = torchvision.io.read_image(item["image"]).to(dtype=torch.float)
         image = image.to(dtype=torch.float)
-        image /= image.max()
+        max_val = image.max()
+        if max_val > 0:
+            image = image / max_val
         image = self.transform(image)  # transform image to [-1, 1]
 
         return image

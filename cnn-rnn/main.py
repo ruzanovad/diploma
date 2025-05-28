@@ -121,76 +121,63 @@ class ModelStatsLogger(pl.Callback):
         - Uses torch.device("meta") for FLOPs estimation.
     """
 
-    def on_fit_start(self, trainer, pl_module):
-        logger = trainer.logger
+    def on_train_start(self, trainer, pl_module):
+        # Параметры модели
+        total_params = sum(p.numel() for p in pl_module.parameters())
 
-        if isinstance(logger, pl.loggers.wandb.WandbLogger):
-            # Параметры модели
-            total_params = sum(p.numel() for p in pl_module.parameters())
+        # FLOPs on meta device
+        try:
+            model = pl_module.clone_for_stats().to("meta")  # beware of constructor args!
+            model.to("meta")
 
-            # FLOPs on meta device
-            try:
-                with torch.device("meta"):
-                    model = pl_module.__class__()  # works only if model has no args
-                    img_meta, frm_meta, len_meta = pl_module.example_input_array
+            img_meta, frm_meta, len_meta = pl_module.example_input_array
+            dummy_images_meta = img_meta.to("meta")
+            dummy_formulas_meta = frm_meta.to("meta")
+            dummy_lengths_meta = len_meta.to("meta")
 
-                    # Move them to meta
-                    dummy_images_meta = img_meta.to("meta")
-                    dummy_formulas_meta = frm_meta.to("meta")
-                    dummy_lengths_meta = len_meta.to("meta")
+            fwd_fn = lambda: model(dummy_images_meta, dummy_formulas_meta, dummy_lengths_meta)
+            flops = measure_flops(model, fwd_fn)
+            gflops = flops / 1e9
+        except Exception as e:
+            print(f"[Warning] FLOPs estimation failed: {e}")
+            gflops = 0
 
-                    fwd_fn = lambda: model(
-                        dummy_images_meta, dummy_formulas_meta, dummy_lengths_meta
-                    )
-                    flops = measure_flops(model, fwd_fn)
-                    gflops = flops / 1e9
-            except Exception as e:
-                print(f"[Warning] FLOPs estimation failed: {e}")
-                gflops = 0
+        # Inference speed (on real device)
+        device = next(pl_module.parameters()).device
+        img, frm, ln = pl_module.example_input_array
+        dummy_images = img.to(device)
+        dummy_formulas = frm.to(device)
+        dummy_lengths = ln.to(device)
 
-            # Inference speed (on real device)
-            device = next(pl_module.parameters()).device
-            img, frm, ln = pl_module.example_input_array
-            dummy_images = img.to(device)
-            dummy_formulas = frm.to(device)
-            dummy_lengths = ln.to(device)
+        pl_module.eval()
+        with torch.no_grad():
+            # Warmup
+            for _ in range(10):
+                _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
 
-            pl_module.eval()
-            with torch.no_grad():
-                # Warmup
-                for _ in range(10):
-                    _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
+            # Measure
 
-                # Measure
-                import time
+            start = time()
+            for _ in range(100):
+                _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
+            end = time()
+            speed_ms = ((end - start) / 100) * 1000  # ms per forward
+        pl_module.train()
 
-                start = time.time()
-                for _ in range(100):
-                    _ = pl_module(dummy_images, dummy_formulas, dummy_lengths)
-                end = time.time()
-                speed_ms = ((end - start) / 100) * 1000  # ms per forward
-
-            # Logging
-            metrics = {
-                "model/parameters": total_params,
-                "model/GFLOPs":    gflops,
-                "model/speed_ms":  speed_ms,
-            }
-             # log to every logger attached to the trainer
-            for lg in trainer.loggers:
-                if isinstance(lg, pl.loggers.wandb.WandbLogger):
-                    # for WandB, push via `experiment`
-                    lg.experiment.log(metrics)
-                elif isinstance(lg, pl.loggers.wandb.LightningLoggerBase):
-                    # generic Lightning logger API
-                    lg.log_metrics(metrics, step=trainer.global_step)
-                else:
-                    # fallback: try a `.log()` method if it exists
-                    if hasattr(lg, "log"):
-                        try:
-                            lg.log(metrics)
-                        except Exception:
-                            pass
+        # Logging
+        metrics = {
+            "model/parameters": total_params,
+            "model/GFLOPs":    gflops,
+            "model/speed_ms": speed_ms,
+        }
+        # log to every logger attached to the trainer
+        for lg in trainer.loggers:
+            if isinstance(lg, pl.loggers.wandb.WandbLogger):
+                # for WandB, push via `experiment`
+                lg.experiment.log(metrics)
+            elif isinstance(lg, pl.loggers.logger.Logger):
+                # generic Lightning logger API
+                lg.log_metrics(metrics, step=trainer.global_step)
 
 
 @hydra.main(config_path="configs", config_name="main", version_base=None)
@@ -303,7 +290,7 @@ def main(args: DictConfig):
 
     # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    stats_logger = ModelStatsLogger()
+    # stats_logger = ModelStatsLogger()
 
     trainer = pl.Trainer(
         logger=[tb_logger, wandb_logger],
@@ -311,7 +298,12 @@ def main(args: DictConfig):
         #     dirpath="logs/profiler",  # where to save
         #     filename=f"{timestamp}-profile.txt",  # filename
         # ),
-        callbacks=[lr_monitor, checkpoint_callback, stats_logger, ModelSummary(3)],
+        callbacks=[
+            lr_monitor,
+            checkpoint_callback,
+            ModelStatsLogger(),
+            ModelSummary(3),
+        ],
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
         strategy=args.strategy,

@@ -2,18 +2,19 @@
 DataModule for im2latex: PyTorch Lightning DataModule for managing data loading and preprocessing.
 
 This module defines the DataModule class, which encapsulates all logic for loading, batching, and
-preprocessing data for the im2latex project. It supports training, validation, testing, and 
-prediction phases, handling both image and formula data. The module includes custom collation 
+preprocessing data for the im2latex project. It supports training, validation, testing, and
+prediction phases, handling both image and formula data. The module includes custom collation
 to pad images andtokenized formulas to uniform sizes within each batch.
 
 Classes:
-    DataModule: Handles dataset splits, DataLoader creation, and 
+    DataModule: Handles dataset splits, DataLoader creation, and
     batch collation for images and formulas.
 
 Typical usage example:
     dm = DataModule(train_set, val_set, test_set, predict_set, batch_size=32, text=text_encoder)
     trainer.fit(model, datamodule=dm)
 """
+
 from typing import List, Tuple
 import torch
 import lightning.pytorch as pl
@@ -27,7 +28,7 @@ class DataModule(pl.LightningDataModule):
     PyTorch Lightning DataModule for the im2latex project.
 
     This module handles all data loading and preprocessing logic for training,
-    validation, testing, and prediction phases. It expects datasets that return 
+    validation, testing, and prediction phases. It expects datasets that return
     tuples of (image_tensor, formula_string).
 
     Args:
@@ -39,6 +40,7 @@ class DataModule(pl.LightningDataModule):
         batch_size (int): Batch size (default=20).
         text (TextEncoder): Helper object for converting formulas to integer token IDs.
     """
+
     def __init__(
         self,
         train_set,
@@ -57,6 +59,7 @@ class DataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.text = text
         self.num_workers = num_workers
+        self.persistent_workers = False
 
     def train_dataloader(self):
         """
@@ -70,7 +73,7 @@ class DataModule(pl.LightningDataModule):
             pin_memory=True,
             drop_last=True,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def val_dataloader(self):
@@ -84,7 +87,7 @@ class DataModule(pl.LightningDataModule):
             collate_fn=self.collate_fn,
             pin_memory=True,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def test_dataloader(self):
@@ -98,7 +101,7 @@ class DataModule(pl.LightningDataModule):
             collate_fn=self.collate_fn,
             pin_memory=True,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def predict_dataloader(self):
@@ -111,8 +114,7 @@ class DataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
         )
 
-
-    def collate_fn(self, batch : List[Tuple[torch.Tensor, str]]):
+    def collate_fn(self, batch: List[Tuple[torch.Tensor, str]]):
         """
         Custom collate function for batching samples.
 
@@ -134,8 +136,10 @@ class DataModule(pl.LightningDataModule):
         formulas = [self.text.text2int(i[1]) for i in batch]
         formula_len = torch.LongTensor([i.size(-1) + 1 for i in formulas])
         formulas = pad_sequence(formulas, batch_first=True)
-        sos = torch.zeros(size, 1) + self.text.word2id["<s>"]
-        eos = torch.zeros(size, 1) + self.text.word2id["<e>"]
+
+        sos = torch.full((size, 1), self.text.word2id["<s>"], dtype=torch.long)
+        eos = torch.full((size, 1), self.text.word2id["<e>"], dtype=torch.long)
+
         formulas = torch.cat((sos, formulas, eos), dim=-1).to(dtype=torch.long)
 
         images = [i[0] for i in batch]

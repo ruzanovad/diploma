@@ -131,13 +131,14 @@ class Image2LatexModel(pl.LightningModule):
         self.max_length = 150
 
         self.example_input_array = (
-            torch.randn(1, 3, 64, 384),              # images
+            torch.randn(1, 3, 64, 384),  # images
             torch.randint(0, self.text.n_class, (1, self.max_length)),  # formulas
-            torch.tensor([self.max_length])              # formula_len
+            torch.tensor([self.max_length]),  # formula_len
         )
 
         self.log_step = log_step
         self.log_text = log_text
+        self.n_class = n_class
         self.exact_match = load("exact_match")
         self.bleu = load("bleu")
         self.save_hyperparameters()
@@ -335,3 +336,29 @@ class Image2LatexModel(pl.LightningModule):
         rank_zero_info(f"Predicted: {latex}")
 
         return latex
+
+    def clone_for_stats(self):
+        # Clone a model for FLOPs estimation — skip non-essential things like metrics
+        return Image2LatexModel(
+            lr=self.hparams.lr,
+            total_steps=self.hparams.total_steps,
+            n_class=self.hparams.n_class,
+            enc_dim=self.hparams.enc_dim,
+            enc_type=self.hparams.enc_type,
+            emb_dim=self.hparams.emb_dim,
+            dec_dim=self.hparams.dec_dim,
+            attn_dim=self.hparams.attn_dim,
+            num_layers=self.hparams.num_layers,
+            dropout=self.hparams.dropout,
+            bidirectional=self.hparams.bidirectional,
+            decode_type=self.hparams.decode_type,
+            text=self.hparams.text,  # required for dummy input and decoding
+            beam_width=self.hparams.beam_width,
+            sos_id=self.hparams.sos_id,
+            eos_id=self.hparams.eos_id,
+            log_step=self.hparams.log_step,
+            log_text=False,  # disable text logging for stats copy
+            nhead=self.hparams.nhead,
+            enc_layers=self.hparams.enc_layers,
+            cnn_channels=self.hparams.cnn_channels,
+        )
