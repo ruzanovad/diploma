@@ -21,6 +21,7 @@ import lightning.pytorch as pl
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from torchvision import transforms as tvt
+import torch.multiprocessing as mp
 
 
 class DataModule(pl.LightningDataModule):
@@ -68,6 +69,7 @@ class DataModule(pl.LightningDataModule):
         self.persistent_workers = num_workers > 0
         # pin_memory only if GPU will be used
         self.pin_memory = torch.cuda.is_available()
+        self.mp_ctx = mp.get_context("spawn")
 
     def train_dataloader(self):
         """
@@ -82,6 +84,7 @@ class DataModule(pl.LightningDataModule):
             drop_last=True,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
+            multiprocessing_context=self.mp_ctx,
         )
 
     def val_dataloader(self):
@@ -96,6 +99,7 @@ class DataModule(pl.LightningDataModule):
             pin_memory=self.pin_memory,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
+            multiprocessing_context=self.mp_ctx,
         )
 
     def test_dataloader(self):
@@ -110,6 +114,7 @@ class DataModule(pl.LightningDataModule):
             pin_memory=self.pin_memory,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
+            multiprocessing_context=self.mp_ctx,
         )
 
     def predict_dataloader(self):
@@ -120,6 +125,7 @@ class DataModule(pl.LightningDataModule):
             self.predict_set,
             shuffle=False,
             batch_size=self.batch_size,
+            multiprocessing_context=self.mp_ctx,
         )
 
     def collate_fn(self, batch: List[Tuple[torch.Tensor, str]]):
