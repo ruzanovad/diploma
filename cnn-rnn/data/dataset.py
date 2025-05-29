@@ -1,10 +1,10 @@
 """
 Dataset definitions for the im2latex project.
 
-This module provides dataset classes for loading and preprocessing image-formula pairs and 
+This module provides dataset classes for loading and preprocessing image-formula pairs and
 prediction images.
 It includes:
-    - LatexDataset: Loads images and corresponding LaTeX formulas from CSV files for training, 
+    - LatexDataset: Loads images and corresponding LaTeX formulas from CSV files for training,
     validation, and testing.
     - LatexPredictDataset: Loads images for prediction/inference.
 
@@ -50,7 +50,7 @@ class LatexDataset(Dataset):
         item = self.walker[idx]
 
         formula = item["formula"]
-        image = torchvision.io.read_image(item["image"])
+        image = torchvision.io.read_image(item["image"]).cpu()
         image = image.to(dtype=torch.float)
         image /= image.max()
         image = self.transform(image)  # transform image to [-1, 1]
@@ -75,6 +75,7 @@ class LatexPredictDataset(Dataset):
     Raises:
         AssertionError: If the provided image path does not exist.
     """
+
     def __init__(self, predict_img_path: str):
         super().__init__()
         if predict_img_path:
@@ -94,7 +95,7 @@ class LatexPredictDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.walker[idx]
 
-        image = torchvision.io.read_image(item["image"]).to(dtype=torch.float)
+        image = torchvision.io.read_image(img_path).cpu().to(dtype=torch.float)
         image = image.to(dtype=torch.float)
         max_val = image.max()
         if max_val > 0:

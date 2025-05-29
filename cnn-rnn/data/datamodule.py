@@ -153,6 +153,8 @@ class DataModule(pl.LightningDataModule):
         formula_lengths = torch.LongTensor([f.size(0) for f in formulas])
         formulas_padded = pad_sequence(formulas, batch_first=True)
 
+        print("text2int_fn device:", formulas[0].device)
+
         # prepend SOS, append EOS
         sos = torch.full((size, 1), self.sos_id, dtype=torch.long)
         eos = torch.full((size, 1), self.eos_id, dtype=torch.long)
