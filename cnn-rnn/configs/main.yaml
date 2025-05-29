@@ -23,7 +23,7 @@ test_sample: 10355
 cnn_channels: 32
 enc_layers: 2
 nhead: 16 
-max_epochs: 30
+max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
@@ -31,8 +31,8 @@ ckpt_path: null
 enc_type: "resnet_encoder"
 enc_dim: 256
 emb_dim: 80
-attn_dim: 256
-dec_dim: 256
+attn_dim: 512
+dec_dim: 512
 dropout: 0.3
 decode_type: "beamsearch"
 beam_width: 5

@@ -6,88 +6,92 @@ import pandas as pd
 from glob import glob
 from tqdm import tqdm
 
+
 SUPPORTS_LIMITS = {"\\int", "\\sum", "\\prod", "\\lim"}
 
 
-def ctr(b):
-    x1, y1, x2, y2 = b
+def get_center(bbox):
+    x1, y1, x2, y2 = bbox
     return (x1 + x2) / 2, (y1 + y2) / 2
 
 
-def w(b):
-    x1, _, x2, _ = b
+def get_width(bbox):
+    x1, _, x2, _ = bbox
     return x2 - x1
 
 
-def h(b):
-    _, y1, _, y2 = b
+def get_height(bbox):
+    _, y1, _, y2 = bbox
     return y2 - y1
 
 
-def horizontally_close(b1, b2, thr=0.6):
-    x11, _, x12, _ = b1
-    x21, _, x22, _ = b2
-    overlap = max(0, min(x12, x22) - max(x11, x21))
-    return overlap > thr * min(w(b1), w(b2))
+def horizontally_overlap(b1, b2, thr=0.6):
+    """True if b1 and b2 overlap by ≥ thr·min(widths)."""
+    overlap = max(0.0, min(b1[2], b2[2]) - max(b1[0], b2[0]))
+    return overlap > thr * min(get_width(b1), get_width(b2))
 
 
-def find_radicand(i, boxes):
-    xi, yi = ctr(boxes[i]["bbox"])
-    hi = h(boxes[i]["bbox"])
-    cand = None
-    dx_min = float("inf")
+def find_radicand(idx, boxes, y_tol=0.3):
+    """For a √ at boxes[idx], find the nearest box to its right on roughly the same y."""
+    xi, yi = get_center(boxes[idx]["bbox"])
+    hi = get_height(boxes[idx]["bbox"])
+    best_j, best_dx = None, float("inf")
+
     for j, b in enumerate(boxes):
-        if j == i:
+        if j == idx: 
             continue
-        xj, yj = ctr(b["bbox"])
-        if yi - 0.3 * hi < yj < yi + 0.3 * hi and xj > xi:
-            dx = xj - xi
-            if dx < dx_min:
-                dx_min = dx
-                cand = j
-    return cand
+        xj, yj = get_center(b["bbox"])
+        dy = abs(yj - yi)
+        dx = xj - xi
+        if dx > 0 and dy <= y_tol * hi and dx < best_dx:
+            best_dx, best_j = dx, j
+
+    return best_j
 
 
 def build_relation_graph(boxes, x_gap=0.6, y_gap=0.35):
     """
-    Для каждого элемента boxes добавляется ключ "relations" со списком
-    {"type": ..., "child": j}.
+    Adds to each dict in `boxes` a key 'relations': a list of {'type':..., 'child':j}.
     """
-    n = len(boxes)
-    # очищаем или инициализируем
+    # 1) clear/init
     for b in boxes:
         b["relations"] = []
 
-    order = sorted(range(n), key=lambda i: ctr(boxes[i]["bbox"])[0])
+    # 2) sort by x center
+    order = sorted(range(len(boxes)),
+                   key=lambda i: get_center(boxes[i]["bbox"])[0])
 
+    # 3) detect super/sub (or over/under) relations
     for i in order:
-        bi = boxes[i]["bbox"]
-        xi, yi = ctr(bi)
-        hi = h(bi)
-        is_limit = boxes[i]["label"] in SUPPORTS_LIMITS
+        parent = boxes[i]
+        xi, yi = get_center(parent["bbox"])
+        hi = get_height(parent["bbox"])
+        is_limit = parent["label"] in SUPPORTS_LIMITS
 
-        for j in range(n):
+        for j, child in enumerate(boxes):
             if i == j:
                 continue
-            bj = boxes[j]["bbox"]
-            if not horizontally_close(bi, bj, thr=x_gap):
+            if not horizontally_overlap(parent["bbox"], child["bbox"], thr=x_gap):
                 continue
-            xj, yj = ctr(bj)
+
+            _, yj = get_center(child["bbox"])
             dy = (yi - yj) / hi
 
             if dy > y_gap:
-                rel = "sup"
+                rel = "under" if is_limit else "sup"
             elif dy < -y_gap:
-                rel = "sub"
+                rel = "over" if is_limit else "sub"
             else:
                 continue
-            boxes[i]["relations"].append({"type": rel, "child": j})
 
+            parent["relations"].append({"type": rel, "child": j})
+
+    # 4) √ → radicand
     for i, b in enumerate(boxes):
-        if b["label"] in {"\\sqrt"}:
-            cand = find_radicand(i, boxes)
-            if cand is not None:
-                boxes[i]["relations"].append({"type": "radicand", "child": cand})
+        if b["label"] == "\\sqrt":
+            j = find_radicand(i, boxes)
+            if j is not None:
+                b["relations"].append({"type": "radicand", "child": j})
 
 
 def to_latex(boxes):
@@ -97,41 +101,57 @@ def to_latex(boxes):
         if i in visited:
             return ""
         visited.add(i)
+
         node = boxes[i]["label"]
-
-        # собираем связи
         rels = boxes[i]["relations"]
-        sup = [e["child"] for e in rels if e["type"] == "sup"]
-        sub = [e["child"] for e in rels if e["type"] == "sub"]
-        over = [e["child"] for e in rels if e["type"] == "over"]
-        under = [e["child"] for e in rels if e["type"] == "under"]
-        rad = [e["child"] for e in rels if e["type"] == "radicand"]
 
-        result = node
+        # radicand first
+        rad = [r["child"] for r in rels if r["type"] == "radicand"]
         if rad:
-            result = f"\\sqrt{{{dfs(rad[0])}}}"
+            return f"\\sqrt{{{dfs(rad[0])}}}"
+
+        # fraction if over+under
+        over = [r["child"] for r in rels if r["type"] == "over"]
+        under = [r["child"] for r in rels if r["type"] == "under"]
         if over and under:
-            result = f"\\frac{{{dfs(over[0])}}}{{{dfs(under[0])}}}"
+            return f"\\frac{{{dfs(over[0])}}}{{{dfs(under[0])}}}"
+
+        # limits vs normal sup/sub
+        is_limit = node in SUPPORTS_LIMITS
+        if is_limit and over and under:
+            node = f"{node}\\limits"
+
+        sup = [r["child"] for r in rels if r["type"] == "sup"]
+        sub = [r["child"] for r in rels if r["type"] == "sub"]
+
+        out = node
         if sup:
-            result += f"^{{{''.join(dfs(k) for k in sup)}}}"
+            out += f"^{{{''.join(dfs(c) for c in sup)}}}"
         if sub:
-            result += f"_{{{''.join(dfs(k) for k in sub)}}}"
-        return result
+            out += f"_{{{''.join(dfs(c) for c in sub)}}}"
+        return out
 
-    latex = []
-    for i in sorted(range(len(boxes)), key=lambda k: ctr(boxes[k]["bbox"])[0]):
+    parts = []
+    for i in sorted(range(len(boxes)),
+                    key=lambda k: get_center(boxes[k]["bbox"])[0]):
         if i not in visited:
-            latex.append(dfs(i))
-    return "".join(latex)
+            parts.append(dfs(i))
+
+    return "".join(parts)
 
 
-def denorm(box, w, h):
+def denorm(box, img_w, img_h):
+    """
+    YOLO → absolute [x1,y1,x2,y2].
+    `box = (xc, yc, bw, bh)` all normalized [0..1].
+    """
     xc, yc, bw, bh = box
-    x1 = (xc - bw / 2) * w
-    y1 = (yc - bh / 2) * h
-    x2 = (xc + bw / 2) * w
-    y2 = (yc + bh / 2) * h
+    x1 = (xc - bw / 2) * img_w
+    y1 = (yc - bh / 2) * img_h
+    x2 = (xc + bw / 2) * img_w
+    y2 = (yc + bh / 2) * img_h
     return [x1, y1, x2, y2]
+
 
 
 with open("datasets/experiment/dataset.yaml", "r") as f:
@@ -163,7 +183,7 @@ if __name__ == "__main__":
         if img is None:
             print(f"Failed to load image {image_path}")
             continue
-        h, w = img.shape[:2]
+        img_h, img_w = img.shape[:2]
 
         try:
             txt = np.loadtxt(pred_path).reshape(-1, 5)
@@ -175,7 +195,7 @@ if __name__ == "__main__":
         for row in txt:
             class_id, xc, yc, bw, bh = row
             class_id = int(class_id)
-            bbox = denorm([xc, yc, bw, bh], w, h)
+            bbox = denorm([xc, yc, bw, bh], img_w, img_h)
 
             boxes.append(
                 {
