@@ -333,7 +333,7 @@ def main(args: DictConfig):
                 enc_layers=args.enc_layers,
             )
 
-            profile_model(model, logger=wandb_logger)
+            # profile_model(model, logger=wandb_logger)
 
             # Загружаем только веса
             state_dict = torch.load(ckpt_path, map_location="cpu")["state_dict"]
@@ -368,7 +368,7 @@ def main(args: DictConfig):
             enc_layers=args.enc_layers,
         )
 
-        profile_model(model, logger=wandb_logger)
+        # profile_model(model, logger=wandb_logger)
 
     # === TRAIN ===
     if args.train:
