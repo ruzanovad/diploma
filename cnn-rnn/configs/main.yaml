@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 128
-accumulate_batch: 256
+batch_size: 156
+accumulate_batch: 312
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"

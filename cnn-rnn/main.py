@@ -196,6 +196,12 @@ def main(args: DictConfig):
     """
     print(OmegaConf.to_yaml(args))
 
+    def force_cuda_init():
+        if torch.cuda.is_available():
+            _ = torch.zeros(1).to("cuda")
+
+    force_cuda_init()
+
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
     pl.seed_everything(args.random_state)
@@ -299,7 +305,7 @@ def main(args: DictConfig):
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
         devices=args.devices,
-        num_sanity_val_steps=1,
+        num_sanity_val_steps=0,
         # max_time=args.max_time,
     )
 
@@ -333,7 +339,7 @@ def main(args: DictConfig):
                 enc_layers=args.enc_layers,
             )
 
-            # profile_model(model, logger=wandb_logger)
+            profile_model(model, logger=wandb_logger)
 
             # Загружаем только веса
             state_dict = torch.load(ckpt_path, map_location="cpu")["state_dict"]
@@ -368,11 +374,11 @@ def main(args: DictConfig):
             enc_layers=args.enc_layers,
         )
 
-        # profile_model(model, logger=wandb_logger)
+        profile_model(model, logger=wandb_logger)
 
     # === TRAIN ===
     if args.train:
-        
+
         print("=" * 10 + "[Train]" + "=" * 10)
         trainer.fit(
             datamodule=dm,
