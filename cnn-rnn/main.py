@@ -312,6 +312,7 @@ def main(args: DictConfig):
         devices=args.devices,
         num_sanity_val_steps=0,
         # max_time=args.max_time,
+        check_val_every_n_epoch=3,
     )
 
     ckpt_path = args.ckpt_path
