@@ -136,8 +136,8 @@ class Decoder(nn.Module):
         # unpack the multi-layer state
         h, c = hidden_state
 
-        h = h.contigious()
-        c = c.contigious()
+        h = h.contiguous()
+        c = c.contiguous()
         embed = self.embedding(y)
         attn_context = self.attention(
             h[-1], encoder_out
@@ -148,8 +148,8 @@ class Decoder(nn.Module):
 
         rnn_input = rnn_input.unsqueeze(1)
         # hidden_state = h.unsqueeze(0), c.unsqueeze(0)
-        out, hidden_state = self.rnn(rnn_input, hidden_state)
+        out, hidden_state = self.rnn(rnn_input, (h, c))
         # out = self.layernorm(out)
         out = self.logsoftmax(self.out(out))
         h, c = hidden_state
-        return out, (h, c), attn_context
+        return out, (h, c)

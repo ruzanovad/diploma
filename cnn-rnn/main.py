@@ -248,6 +248,8 @@ def main(args: DictConfig):
     sos_id = text.sos_id
     eos_id = text.eos_id
 
+    torch.set_float32_matmul_precision('medium') #Y ou are using a CUDA device ('NVIDIA GeForce RTX 3090') that has Tensor Cores.
+
     dm = DataModule(
         train_set=train_set,
         val_set=val_set,
