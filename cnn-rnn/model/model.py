@@ -215,14 +215,14 @@ class Image2LatexModel(pl.LightningModule):
             )
         )
 
-        edit_dist_norm = torch.mean(
-            torch.Tensor(
-                [
-                    edit_distance(tru, pre) / (max(1e-5, len(tru)))
-                    for pre, tru in zip(predicts, truths)
-                ]
-            )
-        )
+        # edit_dist_norm = torch.mean(
+        #     torch.Tensor(
+        #         [
+        #             edit_distance(tru, pre) / (max(1e-5, len(tru)))
+        #             for pre, tru in zip(predicts, truths)
+        #         ]
+        #     )
+        # )
 
         def safe_bleu(pre, tru):
             if not len(pre) or not len(tru):  # Если какая-то строка пустая
@@ -231,27 +231,27 @@ class Image2LatexModel(pl.LightningModule):
                 predictions=[" ".join(pre)], references=[" ".join(tru)]
             )["bleu"]
 
-        bleu4 = torch.mean(
-            torch.Tensor(
-                [
-                    torch.tensor(safe_bleu(pre, tru))
-                    for pre, tru in zip(predicts, truths)
-                ]
-            )
-        )
+        # bleu4 = torch.mean(
+        #     torch.Tensor(
+        #         [
+        #             torch.tensor(safe_bleu(pre, tru))
+        #             for pre, tru in zip(predicts, truths)
+        #         ]
+        #     )
+        # )
 
-        em = torch.mean(
-            torch.Tensor(
-                [
-                    torch.tensor(
-                        self.exact_match.compute(
-                            predictions=[" ".join(pre)], references=[" ".join(tru)]
-                        )["exact_match"]
-                    )
-                    for pre, tru in zip(predicts, truths)
-                ]
-            )
-        )
+        # em = torch.mean(
+        #     torch.Tensor(
+        #         [
+        #             torch.tensor(
+        #                 self.exact_match.compute(
+        #                     predictions=[" ".join(pre)], references=[" ".join(tru)]
+        #                 )["exact_match"]
+        #             )
+        #             for pre, tru in zip(predicts, truths)
+        #         ]
+        #     )
+        # )
 
         if self.log_text and ((batch_idx % self.log_step) == 0):
             truth, pred = truths[0], predicts[0]
@@ -260,12 +260,13 @@ class Image2LatexModel(pl.LightningModule):
             rank_zero_info("=" * 20)
 
         self.log("val_loss", loss, sync_dist=True)
-        self.log("val_edit_distance_norm", edit_dist_norm, sync_dist=True)
+        # self.log("val_edit_distance_norm", edit_dist_norm, sync_dist=True)
         self.log("val_edit_distance", edit_dist, sync_dist=True)
-        self.log("val_bleu4", bleu4, sync_dist=True)
-        self.log("val_exact_match", em, sync_dist=True)
+        # self.log("val_bleu4", bleu4, sync_dist=True)
+        # self.log("val_exact_match", em, sync_dist=True)
 
-        return loss, edit_dist_norm, edit_dist, bleu4, em
+        return loss, edit_dist
+    # bleu4, 
 
     @torch.no_grad
     def test_step(self, batch, batch_idx, *args, **kwargs):
