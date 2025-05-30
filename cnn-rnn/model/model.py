@@ -166,6 +166,10 @@ class Image2LatexModel(pl.LightningModule):
 
         images, formulas, formula_len = batch
 
+        images = images.to(self.device)
+        formulas = formulas.to(self.device)
+        formula_len = formula_len.to(self.device)
+
         formulas_in = formulas[:, :-1]
         formulas_out = formulas[:, 1:]
 
@@ -183,6 +187,10 @@ class Image2LatexModel(pl.LightningModule):
     @torch.no_grad
     def validation_step(self, batch, batch_idx, *args, **kwargs):
         images, formulas, formula_len = batch
+
+        images = images.to(self.device)
+        formulas = formulas.to(self.device)
+        formula_len = formula_len.to(self.device)
 
         formulas_in = formulas[:, :-1]
         formulas_out = formulas[:, 1:]
@@ -263,6 +271,10 @@ class Image2LatexModel(pl.LightningModule):
     def test_step(self, batch, batch_idx, *args, **kwargs):
         images, formulas, formula_len = batch
 
+        images = images.to(self.device)
+        formulas = formulas.to(self.device)
+        formula_len = formula_len.to(self.device)
+
         formulas_in = formulas[:, :-1]
         formulas_out = formulas[:, 1:]
 
@@ -330,6 +342,8 @@ class Image2LatexModel(pl.LightningModule):
     @torch.no_grad
     def predict_step(self, batch, *args, **kwargs):
         image = batch
+
+        image = image.to(self.device)
 
         latex = self.model.decode(image, self.max_length)
 

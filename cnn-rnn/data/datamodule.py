@@ -84,7 +84,7 @@ class DataModule(pl.LightningDataModule):
             drop_last=True,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
-            multiprocessing_context=self.mp_ctx,
+            # multiprocessing_context=self.mp_ctx,
         )
 
     def val_dataloader(self):
@@ -99,7 +99,7 @@ class DataModule(pl.LightningDataModule):
             pin_memory=self.pin_memory,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
-            multiprocessing_context=self.mp_ctx,
+            # multiprocessing_context=self.mp_ctx,
         )
 
     def test_dataloader(self):
@@ -114,7 +114,7 @@ class DataModule(pl.LightningDataModule):
             pin_memory=self.pin_memory,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
-            multiprocessing_context=self.mp_ctx,
+            # multiprocessing_context=self.mp_ctx,
         )
 
     def predict_dataloader(self):
@@ -125,7 +125,7 @@ class DataModule(pl.LightningDataModule):
             self.predict_set,
             shuffle=False,
             batch_size=self.batch_size,
-            multiprocessing_context=self.mp_ctx,
+            # multiprocessing_context=self.mp_ctx,
         )
 
     def collate_fn(self, batch: List[Tuple[torch.Tensor, str]]):
@@ -152,6 +152,7 @@ class DataModule(pl.LightningDataModule):
         formulas = [self.text2int_fn(formula) for _, formula in batch]
         formula_lengths = torch.LongTensor([f.size(0) for f in formulas])
         formulas_padded = pad_sequence(formulas, batch_first=True)
+
 
         # prepend SOS, append EOS
         sos = torch.full((size, 1), self.sos_id, dtype=torch.long)
