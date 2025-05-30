@@ -23,7 +23,7 @@ test_sample: 10355
 cnn_channels: 32
 enc_layers: 2
 nhead: 16 
-max_epochs: 20
+max_epochs: 30
 log_step: 100
 lr: 0.01
 random_state: 42
