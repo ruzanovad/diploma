@@ -15,8 +15,8 @@ predict: false
 log_text: true
 
 # Sample Sizes
-train_sample: 75275
-val_sample: 8370
+train_sample: 1000
+val_sample: 500
 test_sample: 10355
 
 # Training Hyperparameters
@@ -35,7 +35,7 @@ attn_dim: 512
 dec_dim: 512
 dropout: 0.3
 decode_type: "beamsearch"
-beam_width: 5
+beam_width: 4
 num_layers: 4
 model_name: "image_to_latex"
 grad_clip: 0.5

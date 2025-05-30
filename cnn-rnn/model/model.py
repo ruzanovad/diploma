@@ -211,7 +211,9 @@ class Image2LatexModel(pl.LightningModule):
 
         edit_dist = torch.mean(
             torch.Tensor(
-                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)]
+                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)],
+                device=self.device,
+                dtype=torch.float,
             )
         )
 
@@ -266,7 +268,8 @@ class Image2LatexModel(pl.LightningModule):
         # self.log("val_exact_match", em, sync_dist=True)
 
         return loss, edit_dist
-    # bleu4, 
+
+    # bleu4,
 
     @torch.no_grad
     def test_step(self, batch, batch_idx, *args, **kwargs):
@@ -295,7 +298,9 @@ class Image2LatexModel(pl.LightningModule):
 
         edit_dist = torch.mean(
             torch.Tensor(
-                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)]
+                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)],
+                device=self.device,
+                dtype=torch.float,
             )
         )
 
@@ -304,7 +309,9 @@ class Image2LatexModel(pl.LightningModule):
                 [
                     edit_distance(tru, pre) / (max(1e-5, len(tru)))
                     for pre, tru in zip(predicts, truths)
-                ]
+                ],
+                device=self.device,
+                dtype=torch.float,
             )
         )
 
@@ -316,7 +323,7 @@ class Image2LatexModel(pl.LightningModule):
             )["bleu"]
 
         bleu_scores = [safe_bleu(pre, tru) for pre, tru in zip(predicts, truths)]
-        bleu4 = torch.tensor(bleu_scores).mean()
+        bleu4 = torch.tensor(bleu_scores, device=self.device, dtype=torch.float).mean()
 
         em_scores = [
             self.exact_match.compute(
@@ -324,7 +331,7 @@ class Image2LatexModel(pl.LightningModule):
             )["exact_match"]
             for pre, tru in zip(predicts, truths)
         ]
-        em = torch.tensor(em_scores).mean()
+        em = torch.tensor(em_scores, device=self.device, dtype=torch.float).mean()
 
         if self.log_text and ((batch_idx % self.log_step) == 0):
             truth, pred = truths[0], predicts[0]
