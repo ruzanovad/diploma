@@ -210,7 +210,7 @@ class Image2LatexModel(pl.LightningModule):
         edit_dist_norm = torch.mean(
             torch.Tensor(
                 [
-                    edit_distance(tru, pre) / (1e-5 + max(len(pre), len(tru)))
+                    edit_distance(tru, pre) / (max(1e-5, len(tru)))
                     for pre, tru in zip(predicts, truths)
                 ]
             )
@@ -289,7 +289,7 @@ class Image2LatexModel(pl.LightningModule):
         edit_dist_norm = torch.mean(
             torch.Tensor(
                 [
-                    edit_distance(tru, pre) / (1e-5 + max(len(pre), len(tru)))
+                    edit_distance(tru, pre) / (max(1e-5, len(tru)))
                     for pre, tru in zip(predicts, truths)
                 ]
             )
