@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 200
-accumulate_batch: 400
+batch_size: 128
+accumulate_batch: 256
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
@@ -41,8 +41,8 @@ model_name: "image_to_latex"
 grad_clip: 0.5
 num_workers: 8
 gpu: true
-devices: 1
-strategy: "auto"
+devices: -1
+strategy: "ddp"
 rewrite_checkpoint_fitting: false
 checkpoints_path: "checkpoints"
 tb_logs_path: "tb_logs"
