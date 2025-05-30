@@ -118,38 +118,38 @@ class Decoder(nn.Module):
 
     def forward(self, y, encoder_out=None, hidden_state=None):
         """
-        input:
-            y: (bs, target_len)
-            h: (bs, dec_dim)
-            V: (bs, enc_dim, w, h)
+        Forward pass of the decoder.
+
+        Args:
+            y (Tensor): Input token indices [batch_size, target_len]
+            encoder_out (Tensor): Encoder outputs [batch_size, enc_dim, *]
+            hidden_state (tuple): Previous hidden state (h, c)
+            attention_mask (Tensor): Optional attention mask
+
+        Returns:
+            tuple: (
+                output probabilities [batch_size, 1, num_classes],
+                updated hidden state (h, c),
+                attention context [batch_size, enc_dim]
+            )
         """
         # unpack the multi-layer state
-        h_all, c_all = hidden_state  # (L, B, D)
+        h, c = hidden_state
 
-        h_all = h_all.contiguous()
-        c_all = c_all.contiguous()
+        h = h.contigious()
+        c = c.contigious()
+        embed = self.embedding(y)
+        attn_context = self.attention(
+            h[-1], encoder_out
+        )  # Use top layer's hidden state
 
-        # pick only the top layer for attention
-        h_top = h_all[-1]  # (B, D)
+        rnn_input = torch.cat([embed[:, -1], attn_context], dim=1)
+        rnn_input = self.concat(rnn_input)
 
-        # embed only once per time-step, then pick the last token
-        emb = self.embedding(y)  # (B, T, E)
-        last_emb = emb[:, -1]  # (B, E)
-
-        # compute attention using h_top
-        ctx = self.attention(h_top, encoder_out)  # (B, enc_dim)
-
-        # build the single-step RNN input
-        rnn_in = torch.cat([last_emb, ctx], dim=1)  # (B, E+enc_dim)
-        rnn_in = self.concat(rnn_in)  # (B, dec_dim)
-        rnn_in = rnn_in.unsqueeze(1)  # (B, 1, dec_dim)
-
-        # run one step of the decoder LSTM
-        out_seq, (h_n_all, c_n_all) = self.rnn(rnn_in, (h_all, c_all))
-        # out_seq: (B, 1, dec_dim)
-
-        # project to vocab and normalize
-        logits = self.out(out_seq)  # (B, 1, vocab_size)
-        logp = self.logsoftmax(logits)  # (B, 1, vocab_size)
-
-        return logp, (h_n_all, c_n_all)
+        rnn_input = rnn_input.unsqueeze(1)
+        # hidden_state = h.unsqueeze(0), c.unsqueeze(0)
+        out, hidden_state = self.rnn(rnn_input, hidden_state)
+        # out = self.layernorm(out)
+        out = self.logsoftmax(self.out(out))
+        h, c = hidden_state
+        return out, (h, c), attn_context
