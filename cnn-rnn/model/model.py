@@ -210,7 +210,7 @@ class Image2LatexModel(pl.LightningModule):
         truths = [self.text.tokenize(self.text.int2text(i)) for i in formulas]
 
         edit_dist = torch.mean(
-            torch.Tensor(
+            torch.tensor(
                 [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)],
                 device=self.device,
                 dtype=torch.float,
@@ -297,7 +297,7 @@ class Image2LatexModel(pl.LightningModule):
         truths = [self.text.tokenize(self.text.int2text(i)) for i in formulas]
 
         edit_dist = torch.mean(
-            torch.Tensor(
+            torch.tensor(
                 [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)],
                 device=self.device,
                 dtype=torch.float,
@@ -305,7 +305,7 @@ class Image2LatexModel(pl.LightningModule):
         )
 
         edit_dist_norm = torch.mean(
-            torch.Tensor(
+            torch.tensor(
                 [
                     edit_distance(tru, pre) / (max(1e-5, len(tru)))
                     for pre, tru in zip(predicts, truths)

@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 128
-accumulate_batch: 256
+batch_size: 150
+accumulate_batch: 300
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
@@ -15,15 +15,15 @@ predict: false
 log_text: true
 
 # Sample Sizes
-train_sample: 1000
-val_sample: 500
+train_sample: 75275
+val_sample: 8370
 test_sample: 10355
 
 # Training Hyperparameters
 cnn_channels: 32
 enc_layers: 2
 nhead: 16 
-max_epochs: 30
+max_epochs: 25
 log_step: 100
 lr: 0.01
 random_state: 42
@@ -39,7 +39,7 @@ beam_width: 4
 num_layers: 4
 model_name: "image_to_latex"
 grad_clip: 0.5
-num_workers: 8
+num_workers: 9
 gpu: true
 devices: -1
 strategy: "ddp"
