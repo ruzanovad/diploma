@@ -6,6 +6,7 @@ handles model training/validation/testing/prediction(inference)
 import datetime
 import math
 import os
+import time
 from datetime import datetime
 
 import numpy as np
@@ -128,7 +129,7 @@ def profile_model(model: pl.LightningModule, logger=None):
         with torch.no_grad():
             for _ in range(10):
                 _ = prof_model(img, frm, ln)
-            import time
+
 
             start = time.time()
             for _ in range(100):
@@ -271,9 +272,11 @@ def main(args: DictConfig):
         log_model=True,
     )
 
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath=args.checkpoints_path,
-        filename="model-{epoch:02d}-{val_loss:.3f}",
+        filename=args.model_name + "-" + timestamp + "-{epoch:02d}-{val_loss:.3f}",
         monitor="val_loss",
         mode="min",
         save_top_k=2,
@@ -283,7 +286,7 @@ def main(args: DictConfig):
 
     # logger = FileLogger(args.train, args.val, args.test, args.predict)
 
-    # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
 
     # stats_logger = ModelStatsLogger()
 
