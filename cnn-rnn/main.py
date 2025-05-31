@@ -284,6 +284,7 @@ def main(args: DictConfig):
         mode="min",
         save_top_k=2,
         auto_insert_metric_name=False,
+        save_last=True
     )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
@@ -311,7 +312,7 @@ def main(args: DictConfig):
         devices=args.devices,
         num_sanity_val_steps=0,
         # max_time=args.max_time,
-        check_val_every_n_epoch=4,
+        check_val_every_n_epoch=2,
     )
 
     ckpt_path = args.ckpt_path

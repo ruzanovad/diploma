@@ -23,7 +23,7 @@ test_sample: 10355
 cnn_channels: 32
 enc_layers: 2
 nhead: 16 
-max_epochs: 30
+max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
@@ -33,12 +33,12 @@ enc_dim: 512
 emb_dim: 80
 attn_dim: 512
 dec_dim: 512
-dropout: 0.3
+dropout: 0.4
 decode_type: "beamsearch"
-beam_width: 4
-num_layers: 4
-model_name: "image_to_latex"
-grad_clip: 0.5
+beam_width: 5
+num_layers: 2
+model_name: "image_to_latex_trying_to_reproduce"
+grad_clip: 1.0
 num_workers: 9
 gpu: true
 devices: -1
