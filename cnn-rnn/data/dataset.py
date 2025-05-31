@@ -33,6 +33,7 @@ class LatexDataset(Dataset):
         assert data_type in ["train", "test", "validate"], "Not found data type"
         csv_path = data_path + f"/im2latex_{data_type}.csv"
         df = pd.read_csv(csv_path)
+        df = df[df["formula"].apply(lambda x: isinstance(x, str))]
         if n_sample:
             df = df.head(n_sample)
         df["image"] = df.image.map(lambda x: img_path + "/" + x)
@@ -53,7 +54,7 @@ class LatexDataset(Dataset):
         image = torchvision.io.read_image(item["image"]).cpu()
         image = image.to(dtype=torch.float)
         image /= image.max()
-        image = self.transform(image)  # transform image to [-1, 1]
+        image = self.transform(image)
         return image, formula
 
 
