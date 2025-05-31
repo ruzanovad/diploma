@@ -27,7 +27,7 @@ max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
-ckpt_path: "checkpoints/image_to_latex_trying_to_reproduce-2025-05-31_14-47-27-01-1.652.ckpt"
+ckpt_path: null
 enc_type: "resnet_row_encoder"
 enc_dim: 512
 emb_dim: 80
