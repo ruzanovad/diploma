@@ -148,7 +148,7 @@ class Image2LatexModel(pl.LightningModule):
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=self.lr,
-            total_steps=self.   ,
+            total_steps=self.total_steps ,
         )
         scheduler = {
             "scheduler": scheduler,
