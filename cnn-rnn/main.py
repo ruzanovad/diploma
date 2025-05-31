@@ -265,7 +265,7 @@ def main(args: DictConfig):
     )
 
     tb_logger = pl.loggers.tensorboard.TensorBoardLogger(
-        save_dir=args.tb_logs_path, name="image2latex_model", log_graph=True
+        save_dir=args.tb_logs_path, name="image2latex_model", log_graph=False
     )
 
     wandb_logger = pl.loggers.wandb.WandbLogger(
