@@ -241,10 +241,12 @@ def main(args: DictConfig):
 
     effective_steps_per_epoch = steps_per_epoch // accumulate_grad_batches
     total_steps = effective_steps_per_epoch * args.max_epochs
-    if args.devices == -1 or args.devices == 0:
-        total_steps = total_steps // torch.cuda.device_count()
-    else:
-        total_steps = total_steps // args.devices
+    # if args.devices == -1 or args.devices == 0:
+    #     total_steps = total_steps // torch.cuda.device_count()
+    # else:
+    #     total_steps = total_steps // args.devices
+
+    total_steps //= 2
 
     text2int_fn = text.text2int
     word2id = text.word2id
