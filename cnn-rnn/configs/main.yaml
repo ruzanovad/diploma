@@ -42,7 +42,7 @@ grad_clip: 1.0
 num_workers: 9
 gpu: true
 devices: -1
-strategy: "ddp"
+strategy: "auto"
 rewrite_checkpoint_fitting: false
 checkpoints_path: "checkpoints"
 tb_logs_path: "tb_logs"
