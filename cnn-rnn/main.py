@@ -241,6 +241,10 @@ def main(args: DictConfig):
 
     effective_steps_per_epoch = steps_per_epoch // accumulate_grad_batches
     total_steps = effective_steps_per_epoch * args.max_epochs
+    if args.devices == -1 or args.devices == 0:
+        total_steps = total_steps // torch.cuda.device_count()
+    else:
+        total_steps = total_steps // args.devices
 
     text2int_fn = text.text2int
     word2id = text.word2id
@@ -284,7 +288,7 @@ def main(args: DictConfig):
         mode="min",
         save_top_k=2,
         auto_insert_metric_name=False,
-        save_last=True
+        save_last=True,
     )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
