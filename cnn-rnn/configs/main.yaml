@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 148
-accumulate_batch: 296
+batch_size: 144
+accumulate_batch: 288
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
@@ -27,7 +27,7 @@ max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
-ckpt_path: null
+ckpt_path: "checkpoints/image_to_latex_trying_to_reproduce-2025-05-31_14-47-27-01-1.652.ckpt"
 enc_type: "resnet_row_encoder"
 enc_dim: 512
 emb_dim: 80
