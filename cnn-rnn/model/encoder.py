@@ -205,7 +205,7 @@ class ConvTransformerEncoder(nn.Module):
         # CNN frontend to reduce size and extract features
         self.cnn = nn.Sequential(
             # Layer 1
-            nn.Conv2d(1, cnn_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(3, cnn_channels, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cnn_channels),
             nn.ReLU(),
             nn.MaxPool2d((2, 2)),
