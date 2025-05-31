@@ -130,7 +130,6 @@ def profile_model(model: pl.LightningModule, logger=None):
             for _ in range(10):
                 _ = prof_model(img, frm, ln)
 
-
             start = time.time()
             for _ in range(100):
                 _ = prof_model(img, frm, ln)
@@ -248,7 +247,9 @@ def main(args: DictConfig):
     sos_id = text.sos_id
     eos_id = text.eos_id
 
-    torch.set_float32_matmul_precision('medium') #Y ou are using a CUDA device ('NVIDIA GeForce RTX 3090') that has Tensor Cores.
+    torch.set_float32_matmul_precision(
+        "medium"
+    )  # Y ou are using a CUDA device ('NVIDIA GeForce RTX 3090') that has Tensor Cores.
 
     dm = DataModule(
         train_set=train_set,
@@ -287,8 +288,6 @@ def main(args: DictConfig):
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 
     # logger = FileLogger(args.train, args.val, args.test, args.predict)
-
-
 
     # stats_logger = ModelStatsLogger()
 
