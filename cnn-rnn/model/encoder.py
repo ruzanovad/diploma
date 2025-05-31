@@ -113,8 +113,8 @@ class ResNetWithRowEncoder(nn.Module):
                     from ResNet's final feature map.
         """
         # Сделать 3 канала, как требует ResNet
-        if x.size(1) == 1:
-            x = x.repeat(1, 3, 1, 1)
+        # if x.size(1) == 1:
+        #     x = x.repeat(1, 3, 1, 1)
 
         # Feature map: (B, 512, H′, W′)
         features = self.resnet(x)
