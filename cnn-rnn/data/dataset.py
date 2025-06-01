@@ -40,9 +40,11 @@ class LatexDataset(Dataset):
         self.walker = df.to_dict("records")
         self.transform = tvt.Compose(
             [
-                tvt.Normalize((0.5), (0.5)),
+                tvt.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ]
         )
+
+
 
     def __len__(self):
         return len(self.walker)
@@ -53,7 +55,9 @@ class LatexDataset(Dataset):
         formula = item["formula"]
         image = torchvision.io.read_image(item["image"]).cpu()
         image = image.to(dtype=torch.float)
-        image /= image.max()
+        max_val = image.max()
+        if max_val > 0:
+            image = image / max_val
         image = self.transform(image)
         return image, formula
 
@@ -86,7 +90,7 @@ class LatexPredictDataset(Dataset):
             self.walker = []
         self.transform = tvt.Compose(
             [
-                tvt.Normalize((0.5), (0.5)),
+                tvt.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ]
         )
 

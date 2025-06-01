@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 144
-accumulate_batch: 288
+batch_size: 512
+accumulate_batch: 1024
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
@@ -39,7 +39,7 @@ beam_width: 5
 num_layers: 2
 model_name: "reproducing-best"
 grad_clip: 1.0
-num_workers: 9
+num_workers: 14
 gpu: true
 devices: -1
 strategy: "auto"

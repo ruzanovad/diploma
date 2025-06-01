@@ -319,7 +319,7 @@ def main(args: DictConfig):
         num_sanity_val_steps=0,
         # max_time=args.max_time,
         check_val_every_n_epoch=2,
-        precision=16
+        precision='16-mixed'
     )
 
     ckpt_path = args.ckpt_path

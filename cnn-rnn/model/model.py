@@ -384,3 +384,11 @@ class Image2LatexModel(pl.LightningModule):
             enc_layers=self.hparams.enc_layers,
             cnn_channels=self.hparams.cnn_channels,
         )
+    def transfer_batch_to_device(self, batch, device, dataloader_idx):
+        if isinstance(batch, (list, tuple)):
+        # In training/test: (image, formula)
+            image, formula = batch
+            return image.to(device), formula
+        else:
+            # In inference: just image
+            return batch.to(device)
