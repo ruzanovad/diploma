@@ -28,14 +28,14 @@ log_step: 100
 lr: 0.01
 random_state: 42
 ckpt_path: null
-enc_type: "resnet_row_encoder"
+enc_type: "transformer_encoder"
 enc_dim: 512
 emb_dim: 80
 attn_dim: 512
 dec_dim: 512
 dropout: 0.4
 decode_type: "beamsearch"
-beam_width: 5
+beam_width: 2
 num_layers: 2
 model_name: "a100"
 grad_clip: 1.0
