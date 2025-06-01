@@ -241,12 +241,12 @@ def main(args: DictConfig):
 
     effective_steps_per_epoch = steps_per_epoch // accumulate_grad_batches
     total_steps = effective_steps_per_epoch * args.max_epochs
-    # if args.devices == -1 or args.devices == 0:
-    #     total_steps = total_steps // torch.cuda.device_count()
-    # else:
-    #     total_steps = total_steps // args.devices
+    if args.devices == -1 or args.devices == 0:
+        total_steps = total_steps // torch.cuda.device_count()
+    else:
+        total_steps = total_steps // args.devices
 
-    total_steps //= 2
+    # total_steps //= 2
 
     text2int_fn = text.text2int
     word2id = text.word2id
@@ -312,13 +312,14 @@ def main(args: DictConfig):
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
         strategy=args.strategy,
-        log_every_n_steps=1,
+        # log_every_n_steps=50,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
         devices=args.devices,
         num_sanity_val_steps=0,
         # max_time=args.max_time,
         check_val_every_n_epoch=2,
+        precision=16
     )
 
     ckpt_path = args.ckpt_path
@@ -360,7 +361,8 @@ def main(args: DictConfig):
             print(
                 "[INFO] Loading full checkpoint (including hyperparameters, scheduler, etc)."
             )
-            model = Image2LatexModel.load_from_checkpoint(ckpt_path, map_location="cpu")
+            model = Image2LatexModel.load_from_checkpoint(ckpt_path, map_location="cpu", text=text)
+            profile_model(model, logger=wandb_logger)
     else:
         print("[INFO] Starting model from scratch.")
         model = Image2LatexModel(

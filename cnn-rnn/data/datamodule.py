@@ -169,6 +169,6 @@ class DataModule(pl.LightningDataModule):
             pad = tvt.Pad((0, 0, max_w - w, max_h - h))
             return pad(img)
 
-        images = torch.stack([pad_img(img) for img in images]).float()
+        images = torch.stack([pad_img(img) for img in images]).to(dtype=torch.float)
 
         return images, formulas, formula_lengths

@@ -8,9 +8,9 @@ dataset: "100k"
 vocab_file: "data/vocab/latex_tokens.json"
 
 # Run Modes
-train: true
+train: false
 val: false
-test: false
+test: true
 predict: false
 log_text: true
 
@@ -27,7 +27,7 @@ max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
-ckpt_path: null
+ckpt_path: "checkpoints/model-19-0.129.ckpt"
 enc_type: "resnet_row_encoder"
 enc_dim: 512
 emb_dim: 80
@@ -37,7 +37,7 @@ dropout: 0.4
 decode_type: "beamsearch"
 beam_width: 5
 num_layers: 2
-model_name: "image_to_latex_trying_to_reproduce"
+model_name: "reproducing-best"
 grad_clip: 1.0
 num_workers: 9
 gpu: true
