@@ -265,7 +265,8 @@ class Image2Latex(nn.Module):
                 torch.LongTensor([k]).view(bs, -1).to(device)
             )  # <- also move to same device
         return predictions
-
+    
+    @torch.no_grad()
     def decode_beam_search(self, x: Tensor, max_length: int = 150):
         """
         Performs beam search decoding for sequence generation using the model's encoder and decoder.

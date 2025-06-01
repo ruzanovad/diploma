@@ -312,13 +312,13 @@ def main(args: DictConfig):
         max_epochs=args.max_epochs,
         accelerator="gpu" if args.gpu else "auto",
         strategy=args.strategy,
-        # log_every_n_steps=50,
+        log_every_n_steps=1,
         gradient_clip_val=args.grad_clip,
         accumulate_grad_batches=accumulate_grad_batches,
         devices=args.devices,
         num_sanity_val_steps=0,
         # max_time=args.max_time,
-        check_val_every_n_epoch=2,
+        check_val_every_n_epoch=1,
         precision='16-mixed'
     )
 

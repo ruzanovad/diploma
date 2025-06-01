@@ -20,6 +20,12 @@ import torch
 import torchvision
 from torchvision import transforms as tvt
 
+from functools import lru_cache
+
+@lru_cache(maxsize=1024)
+def load_image_cached(path):
+    image = torchvision.io.read_image(path).to(dtype=torch.float)
+    return image.cpu()
 
 class LatexDataset(Dataset):
     """
@@ -40,10 +46,9 @@ class LatexDataset(Dataset):
         self.walker = df.to_dict("records")
         self.transform = tvt.Compose(
             [
-                tvt.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                tvt.Normalize((0.5), (0.5)),
             ]
         )
-
 
 
     def __len__(self):
@@ -53,8 +58,9 @@ class LatexDataset(Dataset):
         item = self.walker[idx]
 
         formula = item["formula"]
-        image = torchvision.io.read_image(item["image"]).cpu()
-        image = image.to(dtype=torch.float)
+        image = load_image_cached(item["image"])
+        # image = torchvision.io.read_image(item["image"]).cpu()
+        # image = image.to(dtype=torch.float)
         max_val = image.max()
         if max_val > 0:
             image = image / max_val
@@ -100,7 +106,8 @@ class LatexPredictDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.walker[idx]
 
-        image = torchvision.io.read_image(img_path).cpu().to(dtype=torch.float)
+        image = load_image_cached(img_path)
+        # image = self.transform(image)
         max_val = image.max()
         if max_val > 0:
             image = image / max_val

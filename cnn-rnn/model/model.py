@@ -209,13 +209,13 @@ class Image2LatexModel(pl.LightningModule):
         ]
         truths = [self.text.tokenize(self.text.int2text(i)) for i in formulas]
 
-        edit_dist = torch.mean(
-            torch.tensor(
-                [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)],
-                device=self.device,
-                dtype=torch.float,
-            )
-        )
+        # edit_dist = torch.mean(
+        #     torch.tensor(
+        #         [edit_distance(tru, pre) for pre, tru in zip(predicts, truths)],
+        #         device=self.device,
+        #         dtype=torch.float,
+        #     )
+        # )
 
         # edit_dist_norm = torch.mean(
         #     torch.Tensor(
@@ -226,12 +226,12 @@ class Image2LatexModel(pl.LightningModule):
         #     )
         # )
 
-        def safe_bleu(pre, tru):
-            if not len(pre) or not len(tru):  # Если какая-то строка пустая
-                return 0.0
-            return self.bleu.compute(
-                predictions=[" ".join(pre)], references=[" ".join(tru)]
-            )["bleu"]
+        # def safe_bleu(pre, tru):
+        #     if not len(pre) or not len(tru):  # Если какая-то строка пустая
+        #         return 0.0
+        #     return self.bleu.compute(
+        #         predictions=[" ".join(pre)], references=[" ".join(tru)]
+        #     )["bleu"]
 
         # bleu4 = torch.mean(
         #     torch.Tensor(
@@ -263,11 +263,12 @@ class Image2LatexModel(pl.LightningModule):
 
         self.log("val_loss", loss, sync_dist=True)
         # self.log("val_edit_distance_norm", edit_dist_norm, sync_dist=True)
-        self.log("val_edit_distance", edit_dist, sync_dist=True)
+        # self.log("val_edit_distance", edit_dist, sync_dist=True)
         # self.log("val_bleu4", bleu4, sync_dist=True)
         # self.log("val_exact_match", em, sync_dist=True)
 
-        return loss, edit_dist
+        return loss
+    # , edit_dist
 
     # bleu4,
 
@@ -384,11 +385,11 @@ class Image2LatexModel(pl.LightningModule):
             enc_layers=self.hparams.enc_layers,
             cnn_channels=self.hparams.cnn_channels,
         )
-    def transfer_batch_to_device(self, batch, device, dataloader_idx):
-        if isinstance(batch, (list, tuple)):
-        # In training/test: (image, formula)
-            image, formula = batch
-            return image.to(device), formula
-        else:
-            # In inference: just image
-            return batch.to(device)
+    # def transfer_batch_to_device(self, batch, device, dataloader_idx):
+    #     if isinstance(batch, (list, tuple)):
+    #     # In training/test: (image, formula)
+    #         image, formula = batch
+    #         return image.to(device), formula
+    #     else:
+    #         # In inference: just image
+    #         return batch.to(device)

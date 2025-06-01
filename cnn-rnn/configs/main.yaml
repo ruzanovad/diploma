@@ -1,6 +1,6 @@
 # Dataset and Path Configuration
-batch_size: 512
-accumulate_batch: 1024
+batch_size: 800
+accumulate_batch: 1600
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
 predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
@@ -8,9 +8,9 @@ dataset: "100k"
 vocab_file: "data/vocab/latex_tokens.json"
 
 # Run Modes
-train: false
+train: true
 val: false
-test: true
+test: false
 predict: false
 log_text: true
 
@@ -27,7 +27,7 @@ max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
-ckpt_path: "checkpoints/model-19-0.129.ckpt"
+ckpt_path: null
 enc_type: "resnet_row_encoder"
 enc_dim: 512
 emb_dim: 80
@@ -37,7 +37,7 @@ dropout: 0.4
 decode_type: "beamsearch"
 beam_width: 5
 num_layers: 2
-model_name: "reproducing-best"
+model_name: "a100"
 grad_clip: 1.0
 num_workers: 14
 gpu: true
