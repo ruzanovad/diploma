@@ -1,49 +1,48 @@
-# Dataset and Path Configuration
-batch_size: 800
-accumulate_batch: 1600
+batch_size: 1
+accumulate_batch: 1
 data_path: "data/im2latex100k"
 img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
-predict_img_path: "data/im2latex100k/formula_images_processed/formula_images_processed"
+predict_img_path: "formula.png"
 dataset: "100k"
 vocab_file: "data/vocab/latex_tokens.json"
 
 # Run Modes
-train: true
+train: false
 val: false
 test: false
-predict: false
+predict: true
 log_text: true
 
 # Sample Sizes
 train_sample: 75275
 val_sample: 8370
 test_sample: 10355
+test_sample: 2048
 
 # Training Hyperparameters
 cnn_channels: 32
 enc_layers: 2
-nhead: 16 
+nhead: 16
 max_epochs: 20
 log_step: 100
 lr: 0.01
 random_state: 42
-ckpt_path: null
-enc_type: "transformer_encoder"
+ckpt_path: "/gdrive/My\ Drive/image2latex/checkpoints/model-19-0.129.ckpt"
+enc_type: "resnet_row_encoder"
 enc_dim: 512
 emb_dim: 80
 attn_dim: 512
 dec_dim: 512
 dropout: 0.4
 decode_type: "beamsearch"
-beam_width: 2
-num_layers: 2
-model_name: "a100"
-grad_clip: 1.0
-num_workers: 14
-gpu: true
+beam_width: 5
+num_layers: 1
+model_name: "a100_test2"
+grad_clip: 0.5
+num_workers: 0
+gpu: false
 devices: -1
 strategy: "auto"
 rewrite_checkpoint_fitting: false
-checkpoints_path: "checkpoints"
-tb_logs_path: "tb_logs"
-
+checkpoints_path: "/gdrive/My\ Drive/image2latex/checkpoints"
+tb_logs_path: "/gdrive/My\ Drive/image2latex/tb_logs"
