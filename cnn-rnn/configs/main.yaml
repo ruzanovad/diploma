@@ -17,7 +17,6 @@ log_text: true
 train_sample: 75275
 val_sample: 8370
 test_sample: 10355
-test_sample: 2048
 
 # Training Hyperparameters
 cnn_channels: 32
